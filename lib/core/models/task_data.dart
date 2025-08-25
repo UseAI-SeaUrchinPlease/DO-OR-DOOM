@@ -12,50 +12,121 @@ class TaskData extends HiveObject {
   String task;
 
   @HiveField(2)
-  Uint8List? image;
+  DateTime due;
 
   @HiveField(3)
-  String? sentence;
+  String? description;
 
   @HiveField(4)
-  DateTime due;
+  Uint8List? image1;
+
+  @HiveField(5)
+  Uint8List? image2;
+
+  @HiveField(6)
+  String? sentence1;
+
+  @HiveField(7)
+  String? sentence2;
 
   TaskData({
     required this.id,
     required this.task,
     required this.due,
-    this.image,
-    this.sentence,
+    this.description,
+    this.image1,
+    this.image2,
+    this.sentence1,
+    this.sentence2,
   });
 
-  /// 画像データが存在するかチェック
-  bool hasImage() {
-    return image != null;
+  /// image1データが存在するかチェック
+  bool hasImage1() {
+    return image1 != null;
   }
 
-  /// 説明文が存在するかチェック
-  bool hasSentence() {
-    return sentence != null && sentence!.isNotEmpty;
+  /// image2データが存在するかチェック
+  bool hasImage2() {
+    return image2 != null;
   }
 
-  /// 画像データのサイズを取得（存在しない場合は0）
-  int getImageSize() {
-    return image?.length ?? 0;
+  /// どちらかの画像データが存在するかチェック
+  bool hasAnyImage() {
+    return hasImage1() || hasImage2();
   }
 
-  /// 説明文の長さを取得（存在しない場合は0）
-  int getSentenceLength() {
-    return sentence?.length ?? 0;
+  /// 両方の画像データが存在するかチェック
+  bool hasBothImages() {
+    return hasImage1() && hasImage2();
   }
 
-  /// 画像と説明文の両方が存在するかチェック
+  /// descriptionが存在するかチェック
+  bool hasDescription() {
+    return description != null && description!.isNotEmpty;
+  }
+
+  /// sentence1が存在するかチェック
+  bool hasSentence1() {
+    return sentence1 != null && sentence1!.isNotEmpty;
+  }
+
+  /// sentence2が存在するかチェック
+  bool hasSentence2() {
+    return sentence2 != null && sentence2!.isNotEmpty;
+  }
+
+  /// image1データのサイズを取得（存在しない場合は0）
+  int getImage1Size() {
+    return image1?.length ?? 0;
+  }
+
+  /// image2データのサイズを取得（存在しない場合は0）
+  int getImage2Size() {
+    return image2?.length ?? 0;
+  }
+
+  /// 総画像データサイズを取得
+  int getTotalImageSize() {
+    return getImage1Size() + getImage2Size();
+  }
+
+  /// descriptionの長さを取得（存在しない場合は0）
+  int getDescriptionLength() {
+    return description?.length ?? 0;
+  }
+
+  /// sentence1の長さを取得（存在しない場合は0）
+  int getSentence1Length() {
+    return sentence1?.length ?? 0;
+  }
+
+  /// sentence2の長さを取得（存在しない場合は0）
+  int getSentence2Length() {
+    return sentence2?.length ?? 0;
+  }
+
+  /// description以外の4つのフィールド（image1、image2、sentence1、sentence2）のいずれかがnullの場合trueを返す
+  bool hasIncompleteData() {
+    return image1 == null ||
+        image2 == null ||
+        sentence1 == null ||
+        sentence2 == null;
+  }
+
+  /// 画像と説明文の両方が存在するかチェック（従来のisComplete相当）
   bool isComplete() {
-    return hasImage() && hasSentence();
+    return hasBothImages() &&
+        hasDescription() &&
+        hasSentence1() &&
+        hasSentence2();
   }
 
-  /// 画像または説明文のいずれかが存在するかチェック
+  /// 追加データが存在するかチェック
   bool hasAdditionalData() {
-    return hasImage() || hasSentence();
+    return hasAnyImage() ||
+        hasDescription() ||
+        hasSentence1() ||
+        hasSentence2();
   }
 
   /// 期限が今日かチェック
@@ -89,6 +160,6 @@ class TaskData extends HiveObject {
 
   @override
   String toString() {
-    return 'TaskData{id: $id, task: $task, due: $due, image: ${getImageSize()} bytes, sentence: ${sentence ?? "null"}}';
+    return 'TaskData{id: $id, task: $task, due: $due, image1: ${getImage1Size()} bytes, image2: ${getImage2Size()} bytes, description: ${description ?? "null"}, sentence1: ${sentence1 ?? "null"}, sentence2: ${sentence2 ?? "null"}}';
   }
 }
