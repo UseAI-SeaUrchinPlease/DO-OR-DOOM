@@ -19,6 +19,7 @@ class TaskDataAdapter extends TypeAdapter<TaskData> {
     return TaskData(
       id: fields[0] as int,
       task: fields[1] as String,
+      due: fields[4] as DateTime,
       image: fields[2] as Uint8List?,
       sentence: fields[3] as String?,
     );
@@ -27,7 +28,7 @@ class TaskDataAdapter extends TypeAdapter<TaskData> {
   @override
   void write(BinaryWriter writer, TaskData obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(5)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -35,7 +36,9 @@ class TaskDataAdapter extends TypeAdapter<TaskData> {
       ..writeByte(2)
       ..write(obj.image)
       ..writeByte(3)
-      ..write(obj.sentence);
+      ..write(obj.sentence)
+      ..writeByte(4)
+      ..write(obj.due);
   }
 
   @override

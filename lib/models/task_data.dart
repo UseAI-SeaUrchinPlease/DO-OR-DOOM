@@ -17,7 +17,16 @@ class TaskData extends HiveObject {
   @HiveField(3)
   String? sentence;
 
-  TaskData({required this.id, required this.task, this.image, this.sentence});
+  @HiveField(4)
+  DateTime due;
+
+  TaskData({
+    required this.id,
+    required this.task,
+    required this.due,
+    this.image,
+    this.sentence,
+  });
 
   /// 画像データが存在するかチェック
   bool hasImage() {
@@ -49,8 +58,37 @@ class TaskData extends HiveObject {
     return hasImage() || hasSentence();
   }
 
+  /// 期限が今日かチェック
+  bool isDueToday() {
+    final today = DateTime.now();
+    return due.year == today.year &&
+        due.month == today.month &&
+        due.day == today.day;
+  }
+
+  /// 期限が過ぎているかチェック
+  bool isOverdue() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dueDate = DateTime(due.year, due.month, due.day);
+    return dueDate.isBefore(today);
+  }
+
+  /// 期限まであと何日かを取得
+  int daysUntilDue() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dueDate = DateTime(due.year, due.month, due.day);
+    return dueDate.difference(today).inDays;
+  }
+
+  /// 期限の文字列表現を取得
+  String getDueDateString() {
+    return '${due.year}/${due.month.toString().padLeft(2, '0')}/${due.day.toString().padLeft(2, '0')}';
+  }
+
   @override
   String toString() {
-    return 'TaskData{id: $id, task: $task, image: ${getImageSize()} bytes, sentence: ${sentence ?? "null"}}';
+    return 'TaskData{id: $id, task: $task, due: $due, image: ${getImageSize()} bytes, sentence: ${sentence ?? "null"}}';
   }
 }

@@ -6,6 +6,7 @@ import 'package:do_or_doom/models/task_data.dart';
 void main() {
   group('TaskStorage Tests', () {
     late Box<TaskData> testBox;
+    final baseDueDate = DateTime(2025, 1, 1); // テスト用の基準日付
 
     setUpAll(() async {
       // テスト用のHive初期化
@@ -31,9 +32,11 @@ void main() {
     test('タスクの保存と取得', () async {
       // テストデータ作成
       final testImageData = Uint8List.fromList([1, 2, 3, 4, 5]);
+      final testDueDate = DateTime.now().add(const Duration(days: 7));
       final task = TaskData(
         id: 1,
         task: 'テストタスク',
+        due: testDueDate,
         image: testImageData,
         sentence: 'これはテスト用の文章です。',
       );
@@ -48,6 +51,7 @@ void main() {
       expect(retrievedTask, isNotNull);
       expect(retrievedTask!.id, equals(1));
       expect(retrievedTask.task, equals('テストタスク'));
+      expect(retrievedTask.due, equals(testDueDate));
       expect(retrievedTask.sentence, equals('これはテスト用の文章です。'));
       expect(retrievedTask.image, equals(testImageData));
     });
@@ -55,9 +59,18 @@ void main() {
     test('複数タスクの保存と全取得', () async {
       // 複数タスクを作成
       final tasks = [
-        TaskData(id: 1, task: 'タスク1', sentence: '文章1'),
-        TaskData(id: 2, task: 'タスク2', sentence: '文章2'),
-        TaskData(id: 3, task: 'タスク3'), // sentenceなし
+        TaskData(id: 1, task: 'タスク1', due: baseDueDate, sentence: '文章1'),
+        TaskData(
+          id: 2,
+          task: 'タスク2',
+          due: baseDueDate.add(const Duration(days: 1)),
+          sentence: '文章2',
+        ),
+        TaskData(
+          id: 3,
+          task: 'タスク3',
+          due: baseDueDate.add(const Duration(days: 2)),
+        ), // sentenceなし
       ];
 
       // すべて保存
@@ -75,7 +88,12 @@ void main() {
 
     test('タスクの更新', () async {
       // 初期タスク作成
-      final task = TaskData(id: 1, task: '元のタスク', sentence: '元の文章');
+      final task = TaskData(
+        id: 1,
+        task: '元のタスク',
+        due: baseDueDate,
+        sentence: '元の文章',
+      );
       await testBox.put(task.id, task);
 
       // タスクを更新
@@ -91,7 +109,12 @@ void main() {
 
     test('タスクの削除', () async {
       // タスク作成・保存
-      final task = TaskData(id: 1, task: 'テストタスク', sentence: 'テスト文章');
+      final task = TaskData(
+        id: 1,
+        task: 'テストタスク',
+        due: baseDueDate,
+        sentence: 'テスト文章',
+      );
       await testBox.put(task.id, task);
 
       // 存在確認
@@ -108,9 +131,24 @@ void main() {
     test('タスクの検索', () async {
       // テストデータ作成
       final tasks = [
-        TaskData(id: 1, task: 'Flutter開発', sentence: 'アプリを作る'),
-        TaskData(id: 2, task: 'テスト作成', sentence: 'ユニットテストを書く'),
-        TaskData(id: 3, task: 'ドキュメント', sentence: 'READMEを更新する'),
+        TaskData(
+          id: 1,
+          task: 'Flutter開発',
+          due: baseDueDate,
+          sentence: 'アプリを作る',
+        ),
+        TaskData(
+          id: 2,
+          task: 'テスト作成',
+          due: baseDueDate.add(const Duration(days: 1)),
+          sentence: 'ユニットテストを書く',
+        ),
+        TaskData(
+          id: 3,
+          task: 'ドキュメント',
+          due: baseDueDate.add(const Duration(days: 2)),
+          sentence: 'READMEを更新する',
+        ),
       ];
 
       for (final task in tasks) {
@@ -149,26 +187,56 @@ void main() {
       expect(getNextAvailableId(), equals(1));
 
       // いくつかタスクを追加
-      await testBox.put(1, TaskData(id: 1, task: 'タスク1'));
-      await testBox.put(2, TaskData(id: 2, task: 'タスク2'));
-      await testBox.put(4, TaskData(id: 4, task: 'タスク4'));
+      await testBox.put(1, TaskData(id: 1, task: 'タスク1', due: baseDueDate));
+      await testBox.put(
+        2,
+        TaskData(
+          id: 2,
+          task: 'タスク2',
+          due: baseDueDate.add(const Duration(days: 1)),
+        ),
+      );
+      await testBox.put(
+        4,
+        TaskData(
+          id: 4,
+          task: 'タスク4',
+          due: baseDueDate.add(const Duration(days: 3)),
+        ),
+      );
 
       // 次のIDは3であることを確認
       expect(getNextAvailableId(), equals(3));
 
       // ID3を追加
-      await testBox.put(3, TaskData(id: 3, task: 'タスク3'));
+      await testBox.put(
+        3,
+        TaskData(
+          id: 3,
+          task: 'タスク3',
+          due: baseDueDate.add(const Duration(days: 2)),
+        ),
+      );
 
       // 次のIDは5であることを確認
       expect(getNextAvailableId(), equals(5));
     });
+
     test('タスク数の取得', () async {
       expect(testBox.length, equals(0));
 
-      await testBox.put(1, TaskData(id: 1, task: 'タスク1'));
+      await testBox.put(1, TaskData(id: 1, task: 'タスク1', due: baseDueDate));
       expect(testBox.length, equals(1));
 
-      await testBox.put(2, TaskData(id: 2, task: 'タスク2', sentence: '文章2'));
+      await testBox.put(
+        2,
+        TaskData(
+          id: 2,
+          task: 'タスク2',
+          due: baseDueDate.add(const Duration(days: 1)),
+          sentence: '文章2',
+        ),
+      );
       expect(testBox.length, equals(2));
 
       await testBox.delete(1);
@@ -183,6 +251,7 @@ void main() {
           TaskData(
             id: i,
             task: 'タスク$i',
+            due: baseDueDate.add(Duration(days: i)),
             sentence: i % 2 == 0 ? '文章$i' : null, // 偶数のIDのみ文章を設定
           ),
         );
@@ -207,6 +276,7 @@ void main() {
       final task = TaskData(
         id: 1,
         task: '画像付きタスク',
+        due: baseDueDate,
         image: largeImageData,
         sentence: '大きな画像データのテスト',
       );
@@ -220,7 +290,7 @@ void main() {
 
     test('nullableフィールドのテスト', () async {
       // 最小限のタスク（IDとtaskのみ）
-      final minimalTask = TaskData(id: 1, task: '最小限タスク');
+      final minimalTask = TaskData(id: 1, task: '最小限タスク', due: baseDueDate);
 
       await testBox.put(minimalTask.id, minimalTask);
       final retrievedMinimal = testBox.get(1);
@@ -238,6 +308,7 @@ void main() {
       final imageOnlyTask = TaskData(
         id: 2,
         task: '画像のみタスク',
+        due: baseDueDate.add(const Duration(days: 1)),
         image: Uint8List.fromList([1, 2, 3]),
       );
 
@@ -253,6 +324,7 @@ void main() {
       final sentenceOnlyTask = TaskData(
         id: 3,
         task: '説明文のみタスク',
+        due: baseDueDate.add(const Duration(days: 2)),
         sentence: 'これは説明文です',
       );
 
@@ -268,6 +340,7 @@ void main() {
       final completeTask = TaskData(
         id: 4,
         task: '完全タスク',
+        due: baseDueDate.add(const Duration(days: 3)),
         image: Uint8List.fromList([1, 2, 3]),
         sentence: '完全な説明文',
       );
@@ -283,16 +356,23 @@ void main() {
 
     test('ヘルパーメソッドのテスト', () async {
       final tasks = [
-        TaskData(id: 1, task: 'タスク1'), // 最小限
+        TaskData(id: 1, task: 'タスク1', due: baseDueDate), // 最小限
         TaskData(
           id: 2,
           task: 'タスク2',
+          due: baseDueDate.add(const Duration(days: 1)),
           image: Uint8List.fromList([1, 2, 3]),
         ), // 画像のみ
-        TaskData(id: 3, task: 'タスク3', sentence: '説明文'), // 説明文のみ
+        TaskData(
+          id: 3,
+          task: 'タスク3',
+          due: baseDueDate.add(const Duration(days: 2)),
+          sentence: '説明文',
+        ), // 説明文のみ
         TaskData(
           id: 4,
           task: 'タスク4',
+          due: baseDueDate.add(const Duration(days: 3)),
           image: Uint8List.fromList([4, 5, 6]),
           sentence: '完全',
         ), // 完全
@@ -309,6 +389,49 @@ void main() {
       expect(testBox.get(3)!.getSentenceLength(), equals(3));
       expect(testBox.get(4)!.getImageSize(), equals(3));
       expect(testBox.get(4)!.getSentenceLength(), equals(2));
+    });
+
+    test('日付関連メソッドのテスト', () async {
+      final today = DateTime.now();
+      final tomorrow = today.add(const Duration(days: 1));
+      final yesterday = today.subtract(const Duration(days: 1));
+
+      final tasks = [
+        TaskData(id: 1, task: '期限切れタスク', due: yesterday),
+        TaskData(
+          id: 2,
+          task: '今日のタスク',
+          due: DateTime(today.year, today.month, today.day),
+        ),
+        TaskData(id: 3, task: '明日のタスク', due: tomorrow),
+        TaskData(
+          id: 4,
+          task: '1週間後のタスク',
+          due: today.add(const Duration(days: 7)),
+        ),
+      ];
+
+      for (final task in tasks) {
+        await testBox.put(task.id, task);
+      }
+
+      // 期限切れチェック
+      expect(testBox.get(1)!.isOverdue(), isTrue);
+      expect(testBox.get(2)!.isOverdue(), isFalse);
+      expect(testBox.get(3)!.isOverdue(), isFalse);
+
+      // 今日が期限チェック
+      expect(testBox.get(1)!.isDueToday(), isFalse);
+      expect(testBox.get(2)!.isDueToday(), isTrue);
+      expect(testBox.get(3)!.isDueToday(), isFalse);
+
+      // 期限までの日数チェック
+      expect(testBox.get(3)!.daysUntilDue(), equals(1));
+      expect(testBox.get(4)!.daysUntilDue(), equals(7));
+
+      // 日付文字列のフォーマットチェック
+      final dueDateString = testBox.get(2)!.getDueDateString();
+      expect(dueDateString, matches(r'^\d{4}/\d{2}/\d{2}$'));
     });
   });
 }
