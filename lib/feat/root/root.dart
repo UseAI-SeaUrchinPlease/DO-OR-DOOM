@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/calendar/calendar.dart';
 import '../../core/addtask/addtask.dart';
+import '../../core/header/header.dart';
 import 'viewtask/viewtask.dart';
 
 class RootWidget extends StatefulWidget {
@@ -63,28 +64,7 @@ class _RootWidgetState extends State<RootWidget> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'DO OR DOOM',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 22,
-            letterSpacing: 1.2,
-          ),
-        ),
-        backgroundColor: const Color(0xFFE7E0EC),
-        foregroundColor: const Color(0xFF49454F),
-        centerTitle: true,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              // 設定機能は準備中（通知なし）
-            },
-          ),
-        ],
-      ),
+      appBar: const HeaderWidget(),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
