@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import '../addtask/addtask.dart';
+import '../../feat/edit/task_edit.dart';
 
 class CalendarWidget extends StatefulWidget {
   const CalendarWidget({super.key});
@@ -175,6 +176,18 @@ class CalendarWidgetState extends State<CalendarWidget> {
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('閉じる'),
             ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _showEditTaskDialog(context, appointment);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6750A4),
+                foregroundColor: Colors.white,
+              ),
+              icon: const Icon(Icons.edit),
+              label: const Text('タスクの編集'),
+            ),
           ],
         );
       },
@@ -210,9 +223,82 @@ class CalendarWidgetState extends State<CalendarWidget> {
     return '${dateTime.year}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.day.toString().padLeft(2, '0')} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 
+  void _showEditTaskDialog(BuildContext context, Appointment appointment) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: '',
+      barrierColor: Colors.black.withOpacity(0.5),
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return Center(
+          child: Container(
+            margin: const EdgeInsets.all(20),
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+              maxWidth: MediaQuery.of(context).size.width * 0.9,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: TaskEdit(
+                taskId: int.tryParse(appointment.id?.toString() ?? ''),
+              ),
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return ScaleTransition(
+          scale: Tween<double>(
+            begin: 0.8,  // 小さい状態から開始
+            end: 1.0,    // 通常サイズまで拡大
+          ).animate(CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutBack,
+          )),
+          child: FadeTransition(
+            opacity: animation,
+            child: child,
+          ),
+        );
+      },
+    ).then((result) {
+      // 編集画面から戻ってきた時の処理
+      if (result != null && result is Map<String, dynamic>) {
+        _updateAppointment(appointment, result);
+      }
+    });
+  }
 
-
-
+  void _updateAppointment(Appointment oldAppointment, Map<String, dynamic> updatedTask) {
+    setState(() {
+      // 既存のAppointmentを削除
+      _appointments.removeWhere((app) => app.id == oldAppointment.id);
+      
+      // 更新されたAppointmentを追加
+      final updatedAppointment = Appointment(
+        id: oldAppointment.id,
+        startTime: updatedTask['startTime'] ?? oldAppointment.startTime,
+        endTime: updatedTask['endTime'] ?? oldAppointment.endTime,
+        subject: updatedTask['title'] ?? oldAppointment.subject,
+        color: updatedTask['color'] ?? oldAppointment.color,
+        notes: updatedTask['notes'] ?? oldAppointment.notes,
+      );
+      
+      _appointments.add(updatedAppointment);
+    });
+  }
 }
 
 class AppointmentDataSource extends CalendarDataSource {

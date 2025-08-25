@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'feat/root/root.dart' as root;
+import 'core/services/task_storage.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Hiveストレージを初期化
+  await TaskStorage.init();
+  
   runApp(const MainApp());
 }
 

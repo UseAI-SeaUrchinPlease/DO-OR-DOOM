@@ -80,13 +80,20 @@ class _TaskEditState extends State<TaskEdit> {
       );
     }
 
-    return AlertDialog(
-      title: Text(
-        widget.taskId != null ? 'タスク詳細 (ID: ${widget.taskId})' : '新規タスク作成',
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          widget.taskId != null ? 'タスク詳細 (ID: ${widget.taskId})' : '新規タスク作成',
+        ),
+        backgroundColor: const Color(0xFFE7E0EC),
+        foregroundColor: const Color(0xFF49454F),
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
       ),
-      content: SizedBox(
-        width: double.maxFinite,
-        height: MediaQuery.of(context).size.height * 0.65, // 画面の60%の高さに制限
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(
           // スクロール可能にする
           child: Column(
@@ -121,19 +128,48 @@ class _TaskEditState extends State<TaskEdit> {
 
               // AIボタンセクション
               AIButton(onPressed: () => _showAIAlert(context)),
+              
+              const SizedBox(height: 20),
             ],
           ),
         ),
       ),
-      actions: [
-        if (widget.taskId != null) ...[
-          TextButton(onPressed: () => _saveTask(), child: const Text('保存')),
-        ],
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('閉じる'),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, -2),
+            ),
+          ],
         ),
-      ],
+        child: Row(
+          children: [
+            Expanded(
+              child: TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('閉じる'),
+              ),
+            ),
+            if (widget.taskId != null) ...[
+              const SizedBox(width: 16),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => _saveTask(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6750A4),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('保存'),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
