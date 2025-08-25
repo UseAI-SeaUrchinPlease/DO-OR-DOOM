@@ -181,16 +181,32 @@ class _AiDiaryState extends State<AiDiary> {
   /// 画像の装飾を取得
   DecorationImage? _getImageDecoration() {
     if (isDoingSelected) {
-      // 「タスクをすると？」選択時は固定画像
-      return const DecorationImage(
-        image: AssetImage("assets/images/sacabambaspis2.png"),
-        fit: BoxFit.cover,
-      );
+      // 「タスクをすると？」選択時もHiveデータから取得
+      if (selectedTask?.hasAnyImage() == true) {
+        // image1が優先、なければimage2を使用
+        final imageData = selectedTask!.hasImage1()
+            ? selectedTask!.image1!
+            : selectedTask!.image2!;
+        return DecorationImage(
+          image: MemoryImage(imageData),
+          fit: BoxFit.cover,
+        );
+      } else {
+        // 画像がない場合はデフォルト画像
+        return const DecorationImage(
+          image: AssetImage("assets/images/sacabambaspis2.png"),
+          fit: BoxFit.cover,
+        );
+      }
     } else {
       // 「タスクをしないと？」選択時はHiveデータから取得
-      if (selectedTask?.hasImage() == true) {
+      if (selectedTask?.hasAnyImage() == true) {
+        // image1が優先、なければimage2を使用
+        final imageData = selectedTask!.hasImage1()
+            ? selectedTask!.image1!
+            : selectedTask!.image2!;
         return DecorationImage(
-          image: MemoryImage(selectedTask!.image!),
+          image: MemoryImage(imageData),
           fit: BoxFit.cover,
         );
       } else {
@@ -206,14 +222,61 @@ class _AiDiaryState extends State<AiDiary> {
   /// 表示するテキストを取得
   String _getDisplayText() {
     if (isDoingSelected) {
-      // 「タスクをすると？」選択時は固定テキスト
-      return 'タスクをやったらすごい充実感！\n今日も一歩前進できました。やっぱりやるべきことをちゃんとやると気持ちがいいですね。\n\n朝早く起きて、計画通りに進められたのが良かった。最初は面倒だと思っていたけど、始めてみると意外と楽しくて、どんどん進められました。\n\n完了したタスクを見返すと、本当に達成感があります。明日もこの調子で頑張ろう！\n\nやっぱり「やる」って決めて実行すると、自分に自信が持てるし、次のタスクへのモチベーションも上がります。\n\n今度はもっと大きな目標にもチャレンジしてみたいと思います。一歩ずつでも前に進んでいる実感があって、とても嬉しいです。\n\nタスクをやって本当に良かった！';
+      // 「タスクをすると？」選択時もHiveデータから取得
+      if (selectedTask != null) {
+        String displayText = '${selectedTask!.task}\n\n';
+
+        // description、sentence1、sentence2の順で表示
+        if (selectedTask!.hasDescription()) {
+          displayText += '${selectedTask!.description!}\n\n';
+        }
+        if (selectedTask!.hasSentence1()) {
+          displayText += '${selectedTask!.sentence1!}\n\n';
+        }
+        if (selectedTask!.hasSentence2()) {
+          displayText += '${selectedTask!.sentence2!}';
+        }
+
+        // 何もテキストがない場合はデフォルトテキストを表示
+        if (!selectedTask!.hasDescription() &&
+            !selectedTask!.hasSentence1() &&
+            !selectedTask!.hasSentence2()) {
+          displayText +=
+              'タスクをやったらすごい充実感！\n今日も一歩前進できました。やっぱりやるべきことをちゃんとやると気持ちがいいですね。\n\n朝早く起きて、計画通りに進められたのが良かった。最初は面倒だと思っていたけど、始めてみると意外と楽しくて、どんどん進められました。\n\n完了したタスクを見返すと、本当に達成感があります。明日もこの調子で頑張ろう！\n\nやっぱり「やる」って決めて実行すると、自分に自信が持てるし、次のタスクへのモチベーションも上がります。\n\n今度はもっと大きな目標にもチャレンジしてみたいと思います。一歩ずつでも前に進んでいる実感があって、とても嬉しいです。\n\nタスクをやって本当に良かった！';
+        }
+
+        return displayText.trim(); // 末尾の余分な改行を削除
+      } else {
+        // タスクが選択されていない場合はデフォルトテキスト
+        return 'タスクをやったらすごい充実感！\n今日も一歩前進できました。やっぱりやるべきことをちゃんとやると気持ちがいいですね。\n\n朝早く起きて、計画通りに進められたのが良かった。最初は面倒だと思っていたけど、始めてみると意外と楽しくて、どんどん進められました。\n\n完了したタスクを見返すと、本当に達成感があります。明日もこの調子で頑張ろう！\n\nやっぱり「やる」って決めて実行すると、自分に自信が持てるし、次のタスクへのモチベーションも上がります。\n\n今度はもっと大きな目標にもチャレンジしてみたいと思います。一歩ずつでも前に進んでいる実感があって、とても嬉しいです。\n\nタスクをやって本当に良かった！';
+      }
     } else {
       // 「タスクをしないと？」選択時はHiveデータから取得
-      if (selectedTask?.hasSentence() == true) {
-        return '${selectedTask!.task}\n\n${selectedTask!.sentence!}';
+      if (selectedTask != null) {
+        String displayText = '${selectedTask!.task}\n\n';
+
+        // description、sentence1、sentence2の順で表示
+        if (selectedTask!.hasDescription()) {
+          displayText += '${selectedTask!.description!}\n\n';
+        }
+        if (selectedTask!.hasSentence1()) {
+          displayText += '${selectedTask!.sentence1!}\n\n';
+        }
+        if (selectedTask!.hasSentence2()) {
+          displayText += '${selectedTask!.sentence2!}';
+        }
+
+        // 何もテキストがない場合はデフォルトテキストを表示
+        if (!selectedTask!.hasDescription() &&
+            !selectedTask!.hasSentence1() &&
+            !selectedTask!.hasSentence2()) {
+          displayText +=
+              'くぅ～疲れましたw これにて完結です！\n実は、ネタレスしたら代行の話を持ちかけられたのが始まりでした\n本当は話のネタなかったのですが←\nご厚意を無駄にするわけには行かないので流行りのネタで挑んでみた所存ですw\n以下、まどか達のみんなへのメッセジをどぞ\nまどか「みんな、見てくれてありがとう\nちょっと腹黒なところも見えちゃったけど・・・気にしないでね！」\nさやか「いやーありがと！\n私のかわいさは二十分に伝わったかな？」\nマミ「見てくれたのは嬉しいけどちょっと恥ずかしいわね・・・」\n京子「見てくれありがとな！\n正直、作中で言った私の気持ちは本当だよ！」\nほむら「・・・ありがと」ﾌｧｻ\nでは、\nまどか、さやか、マミ、京子、ほむら、俺「皆さんありがとうございました！」\n終\nまどか、さやか、マミ、京子、ほむら「って、なんで俺くんが！？\n改めまして、ありがとうございました！」\n本当の本当に終わり';
+        }
+
+        return displayText.trim(); // 末尾の余分な改行を削除
       } else {
-        // 説明文がない場合はデフォルトテキスト
+        // タスクが選択されていない場合はデフォルトテキスト
         return 'くぅ～疲れましたw これにて完結です！\n実は、ネタレスしたら代行の話を持ちかけられたのが始まりでした\n本当は話のネタなかったのですが←\nご厚意を無駄にするわけには行かないので流行りのネタで挑んでみた所存ですw\n以下、まどか達のみんなへのメッセジをどぞ\nまどか「みんな、見てくれてありがとう\nちょっと腹黒なところも見えちゃったけど・・・気にしないでね！」\nさやか「いやーありがと！\n私のかわいさは二十分に伝わったかな？」\nマミ「見てくれたのは嬉しいけどちょっと恥ずかしいわね・・・」\n京子「見てくれありがとな！\n正直、作中で言った私の気持ちは本当だよ！」\nほむら「・・・ありがと」ﾌｧｻ\nでは、\nまどか、さやか、マミ、京子、ほむら、俺「皆さんありがとうございました！」\n終\nまどか、さやか、マミ、京子、ほむら「って、なんで俺くんが！？\n改めまして、ありがとうございました！」\n本当の本当に終わり';
       }
     }
