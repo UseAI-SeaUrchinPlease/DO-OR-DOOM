@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
 import '../../core/calendar/calendar.dart';
+import '../../core/addtask/addtask.dart';
 
-class RootWidget extends StatelessWidget {
+class RootWidget extends StatefulWidget {
   const RootWidget({super.key});
+
+  @override
+  State<RootWidget> createState() => _RootWidgetState();
+}
+
+class _RootWidgetState extends State<RootWidget> {
+  final GlobalKey<CalendarWidgetState> _calendarKey = GlobalKey<CalendarWidgetState>();
 
   @override
   Widget build(BuildContext context) {
@@ -43,9 +51,26 @@ class RootWidget extends StatelessWidget {
             ],
           ),
         ),
-        child: const Padding(
-          padding: EdgeInsets.all(16),
-          child: CalendarWidget(),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              // カレンダーウィジェット（固定サイズ）
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.6, // 画面の60%の高さ
+                child: CalendarWidget(key: _calendarKey),
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // タスク追加ウィジェット
+              AddTaskWidget(
+                onTaskAdded: (TaskData taskData) {
+                  _calendarKey.currentState?.addTaskFromData(taskData);
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

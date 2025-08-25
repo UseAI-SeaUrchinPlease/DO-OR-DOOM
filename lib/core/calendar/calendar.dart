@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
+import '../addtask/addtask.dart';
 
 class CalendarWidget extends StatefulWidget {
   const CalendarWidget({super.key});
@@ -50,7 +51,7 @@ class CalendarWidgetState extends State<CalendarWidget> {
             ),
           ),
           headerStyle: const CalendarHeaderStyle(
-            textAlign: TextAlign.center,
+                                    textAlign: TextAlign.center,
             backgroundColor: Color(0xFFE7E0EC),
             textStyle: TextStyle(
               fontSize: 20,
@@ -88,7 +89,7 @@ class CalendarWidgetState extends State<CalendarWidget> {
           ],
           appointmentTextStyle: const TextStyle(
             fontSize: 12,
-            fontWeight: FontWeight.w500,
+                                                  fontWeight: FontWeight.w500,
             color: Colors.white,
           ),
         ),
@@ -96,18 +97,47 @@ class CalendarWidgetState extends State<CalendarWidget> {
     );
   }
 
+  // 外部から呼び出せるタスク追加メソッド
+  void addTaskFromData(TaskData taskData) {
+    final startDateTime = DateTime(
+      taskData.date.year,
+      taskData.date.month,
+      taskData.date.day,
+      taskData.startTime?.hour ?? 9,
+      taskData.startTime?.minute ?? 0,
+    );
+    final endDateTime = DateTime(
+      taskData.date.year,
+      taskData.date.month,
+      taskData.date.day,
+      taskData.endTime?.hour ?? 10,
+      taskData.endTime?.minute ?? 0,
+    );
+
+    final newAppointment = Appointment(
+      startTime: startDateTime,
+      endTime: endDateTime,
+      subject: taskData.title,
+      color: taskData.color,
+      notes: taskData.description,
+    );
+
+    setState(() {
+      _appointments.add(newAppointment);
+    });
+  }
 
   void _showAppointmentDetails(BuildContext context, Appointment appointment) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(
+                                      shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
           title: Row(
-            children: [
-              Container(
+                                      children: [
+                                        Container(
                 width: 12,
                 height: 12,
                 decoration: BoxDecoration(
@@ -116,21 +146,21 @@ class CalendarWidgetState extends State<CalendarWidget> {
                 ),
               ),
               const SizedBox(width: 8),
-              Expanded(
+                          Expanded(
                 child: Text(
                   appointment.subject,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
                   ),
-                ),
-              ),
-            ],
-          ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
           content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
               _buildDetailRow(Icons.access_time, '開始時間', _formatDateTime(appointment.startTime)),
               const SizedBox(height: 12),
               _buildDetailRow(Icons.access_time_filled, '終了時間', _formatDateTime(appointment.endTime)),
@@ -153,18 +183,18 @@ class CalendarWidgetState extends State<CalendarWidget> {
 
   Widget _buildDetailRow(IconData icon, String label, String value) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
         Icon(icon, size: 16, color: const Color(0xFF6750A4)),
         const SizedBox(width: 8),
-        Text(
+                                              Text(
           '$label: ',
           style: const TextStyle(
             fontWeight: FontWeight.w600,
             color: Color(0xFF49454F),
-          ),
-        ),
-        Expanded(
+                            ),
+                          ),
+                          Expanded(
           child: Text(
             value,
             style: const TextStyle(color: Color(0xFF49454F)),
