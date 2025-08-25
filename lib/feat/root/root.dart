@@ -1,16 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/calendar/calendar.dart';
 
-class RootWidget extends StatefulWidget {
+class RootWidget extends StatelessWidget {
   const RootWidget({super.key});
-
-  @override
-  State<RootWidget> createState() => _RootWidgetState();
-}
-
-class _RootWidgetState extends State<RootWidget> {
-  DateTime? _selectedDate;
-  final GlobalKey<CalendarWidgetState> _calendarKey = GlobalKey<CalendarWidgetState>();
 
   @override
   Widget build(BuildContext context) {
@@ -51,59 +43,11 @@ class _RootWidgetState extends State<RootWidget> {
             ],
           ),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              // カレンダー
-              Expanded(
-                child: CalendarWidget(
-                  key: _calendarKey,
-                  onSelectedDateChanged: (DateTime? selectedDate) {
-                    setState(() {
-                      _selectedDate = selectedDate;
-                    });
-                  },
-                ),
-              ),
-              
-              const SizedBox(height: 16),
-              
-              // 予定を追加ボタン
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _selectedDate != null
-                      ? () {
-                          _calendarKey.currentState?.addAppointmentForSelectedDate();
-                        }
-                      : null,
-                  icon: const Icon(Icons.add),
-                  label: Text(
-                    _selectedDate != null 
-                        ? '${_formatDate(_selectedDate!)} に予定を追加'
-                        : '日付を選択してください',
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _selectedDate != null 
-                        ? const Color(0xFF6750A4)
-                        : Colors.grey,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+        child: const Padding(
+          padding: EdgeInsets.all(16),
+          child: CalendarWidget(),
         ),
       ),
     );
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.year}年${date.month}月${date.day}日';
   }
 }
