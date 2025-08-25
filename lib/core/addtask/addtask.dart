@@ -1,28 +1,11 @@
 import 'package:flutter/material.dart';
-
-// タスク追加用のモデルクラス
-class TaskData {
-  final String title;
-  final DateTime date;
-  final String? description;
-  final Color color;
-  final TimeOfDay? startTime;
-  final TimeOfDay? endTime;
-
-  TaskData({
-    required this.title,
-    required this.date,
-    this.description,
-    this.color = const Color(0xFF6750A4),
-    this.startTime,
-    this.endTime,
-  });
-}
+import '../models/task_data.dart';
+import '../services/task_storage.dart';
 
 // 新規タスク追加ウィジェット
 class AddTaskWidget extends StatefulWidget {
   final DateTime? initialDate;
-  final Function(TaskData)? onTaskAdded;
+  final VoidCallback? onTaskAdded;  // TaskDataを直接渡さず、追加完了を通知
 
   const AddTaskWidget({
     super.key,
@@ -38,9 +21,6 @@ class _AddTaskWidgetState extends State<AddTaskWidget> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
-  TimeOfDay _startTime = const TimeOfDay(hour: 9, minute: 0);
-  TimeOfDay _endTime = const TimeOfDay(hour: 10, minute: 0);
-  Color _selectedColor = const Color(0xFF6750A4);
 
   @override
   void initState() {
@@ -120,45 +100,7 @@ class _AddTaskWidgetState extends State<AddTaskWidget> {
           ),
           const SizedBox(height: 16),
 
-          // 時間選択
-          Row(
-            children: [
-              Expanded(
-                child: InkWell(
-                  onTap: () => _selectStartTime(context),
-                  child: InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: '開始時間',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.access_time, color: Color(0xFF6750A4)),
-                    ),
-                    child: Text(
-                      _startTime.format(context),
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: InkWell(
-                  onTap: () => _selectEndTime(context),
-                  child: InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: '終了時間',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.access_time_filled, color: Color(0xFF6750A4)),
-                    ),
-                    child: Text(
-                      _endTime.format(context),
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
+
 
           // 詳細入力
           TextField(
@@ -174,50 +116,7 @@ class _AddTaskWidgetState extends State<AddTaskWidget> {
           ),
           const SizedBox(height: 16),
 
-          // カラー選択
-          const Text(
-            'カラー選択:',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF49454F),
-            ),
-          ),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 12,
-            children: [
-              const Color(0xFF6750A4),
-              const Color(0xFFE91E63),
-              const Color(0xFF4CAF50),
-              const Color(0xFFFF9800),
-              const Color(0xFF2196F3),
-              const Color(0xFF9C27B0),
-            ].map((color) {
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedColor = color;
-                  });
-                },
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: color,
-                    shape: BoxShape.circle,
-                    border: _selectedColor == color
-                        ? Border.all(color: Colors.black, width: 3)
-                        : null,
-                  ),
-                  child: _selectedColor == color
-                      ? const Icon(Icons.check, color: Colors.white, size: 20)
-                      : null,
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 24),
 
           // ボタン
           Row(
@@ -274,62 +173,48 @@ class _AddTaskWidgetState extends State<AddTaskWidget> {
     }
   }
 
-  Future<void> _selectStartTime(BuildContext context) async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: _startTime,
-    );
-    if (picked != null) {
-      setState(() {
-        _startTime = picked;
-      });
-    }
-  }
 
-  Future<void> _selectEndTime(BuildContext context) async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: _endTime,
-    );
-    if (picked != null) {
-      setState(() {
-        _endTime = picked;
-      });
-    }
-  }
 
   void _clearForm() {
     setState(() {
       _titleController.clear();
       _descriptionController.clear();
       _selectedDate = widget.initialDate ?? DateTime.now();
-      _startTime = const TimeOfDay(hour: 9, minute: 0);
-      _endTime = const TimeOfDay(hour: 10, minute: 0);
-      _selectedColor = const Color(0xFF6750A4);
     });
   }
 
-  void _addTask() {
+  Future<void> _addTask() async {
     if (_titleController.text.trim().isEmpty) {
       // タスク名が空の場合は処理を終了（通知なし）
       return;
     }
 
-    final taskData = TaskData(
-      title: _titleController.text.trim(),
-      date: _selectedDate,
-      description: _descriptionController.text.trim().isEmpty 
-          ? null 
-          : _descriptionController.text.trim(),
-      color: _selectedColor,
-      startTime: _startTime,
-      endTime: _endTime,
-    );
+    try {
+      // 新しいIDを生成
+      final newId = TaskStorage.getNextAvailableId();
+      
+      // HiveのTaskDataを作成
+      final taskData = TaskData(
+        id: newId,
+        task: _titleController.text.trim(),
+        due: _selectedDate,
+        sentence: _descriptionController.text.trim().isEmpty 
+            ? null 
+            : _descriptionController.text.trim(),
+      );
 
-    widget.onTaskAdded?.call(taskData);
-    
-    // タスク追加完了（通知なし）
-
-    _clearForm();
+      // Hiveストレージに保存
+      await TaskStorage.updateTask(taskData);
+      
+      // コールバックで追加完了を通知
+      widget.onTaskAdded?.call();
+      
+      // フォームをクリア
+      _clearForm();
+      
+    } catch (e) {
+      // エラーハンドリング（デバッグ用）
+      debugPrint('タスク追加エラー: $e');
+    }
   }
 }

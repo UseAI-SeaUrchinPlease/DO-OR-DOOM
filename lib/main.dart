@@ -20,7 +20,7 @@ class MainApp extends StatelessWidget {
       title: 'DO OR DOOM - タスク管理カレンダー',
       theme: ThemeData(
         useMaterial3: true,
-        fontFamily: 'Roboto',
+                                    fontFamily: 'Roboto',
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF6750A4),
           brightness: Brightness.light,
@@ -32,7 +32,7 @@ class MainApp extends StatelessWidget {
         ),
         cardTheme: const CardThemeData(
           elevation: 2,
-          shape: RoundedRectangleBorder(
+                                      shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(12)),
           ),
         ),

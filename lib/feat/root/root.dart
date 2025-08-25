@@ -90,8 +90,9 @@ class _RootWidgetState extends State<RootWidget> {
               
               // タスク追加ウィジェット
               AddTaskWidget(
-                onTaskAdded: (TaskData taskData) {
-                  _calendarKey.currentState?.addTaskFromData(taskData);
+                onTaskAdded: () {
+                  // タスクが追加されたら、カレンダーを更新
+                  _calendarKey.currentState?.refreshTasks();
                 },
               ),
               
@@ -100,9 +101,9 @@ class _RootWidgetState extends State<RootWidget> {
               // タスク一覧
               TaskListWidget(
                 tasks: _createDummyTasks(),
-                                       onTaskTap: (task) {
+                        onTaskTap: (task) {
                          // タスク詳細画面への遷移（将来実装、通知なし）
-                       },
+                },
                 onTaskCompletedChanged: (task) {
                   // チェックボックス変更処理（通知なし）
                 },

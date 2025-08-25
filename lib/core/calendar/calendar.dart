@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
-import '../addtask/addtask.dart';
+import '../models/task_data.dart';
+import '../services/task_storage.dart';
 import '../../feat/edit/task_edit.dart';
 
 class CalendarWidget extends StatefulWidget {
@@ -13,6 +14,12 @@ class CalendarWidget extends StatefulWidget {
 class CalendarWidgetState extends State<CalendarWidget> {
   final CalendarController _calendarController = CalendarController();
   List<Appointment> _appointments = <Appointment>[];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTasks();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -98,34 +105,60 @@ class CalendarWidgetState extends State<CalendarWidget> {
     );
   }
 
-  // 外部から呼び出せるタスク追加メソッド
-  void addTaskFromData(TaskData taskData) {
+  // Hiveからタスクを読み込んでカレンダーに表示
+  Future<void> _loadTasks() async {
+    try {
+      final tasks = await TaskStorage.getAllTasks();
+      setState(() {
+        _appointments = tasks.map((task) => _createAppointmentFromTask(task)).toList();
+      });
+    } catch (e) {
+      print('タスクの読み込みに失敗しました: $e');
+    }
+  }
+
+  // TaskDataからAppointmentを作成
+  Appointment _createAppointmentFromTask(TaskData task) {
+    // 期限日の9:00-10:00をデフォルトの時間枠として設定
     final startDateTime = DateTime(
-      taskData.date.year,
-      taskData.date.month,
-      taskData.date.day,
-      taskData.startTime?.hour ?? 9,
-      taskData.startTime?.minute ?? 0,
+      task.due.year,
+      task.due.month,
+      task.due.day,
+      9,
+      0,
     );
     final endDateTime = DateTime(
-      taskData.date.year,
-      taskData.date.month,
-      taskData.date.day,
-      taskData.endTime?.hour ?? 10,
-      taskData.endTime?.minute ?? 0,
+      task.due.year,
+      task.due.month,
+      task.due.day,
+      10,
+      0,
     );
 
-    final newAppointment = Appointment(
+    return Appointment(
+      id: task.id,
       startTime: startDateTime,
       endTime: endDateTime,
-      subject: taskData.title,
-      color: taskData.color,
-      notes: taskData.description,
+      subject: task.task,
+      color: _getTaskColor(task),
+      notes: task.sentence ?? '',
     );
+  }
 
-    setState(() {
-      _appointments.add(newAppointment);
-    });
+  // タスクの状態に応じて色を決定
+  Color _getTaskColor(TaskData task) {
+    if (task.isOverdue()) {
+      return const Color(0xFFFF0000); // 赤（期限切れ）
+    } else if (task.isDueToday()) {
+      return const Color(0xFFFF8800); // オレンジ（今日が期限）
+    } else {
+      return const Color(0xFF6750A4); // 紫（通常）
+    }
+  }
+
+  // タスクの変更を外部から通知する
+  void refreshTasks() {
+    _loadTasks();
   }
 
   void _showAppointmentDetails(BuildContext context, Appointment appointment) {
@@ -211,9 +244,9 @@ class CalendarWidgetState extends State<CalendarWidget> {
           child: Text(
             value,
             style: const TextStyle(color: Color(0xFF49454F)),
-          ),
-        ),
-      ],
+                                                ),
+                                              ),
+                                            ],
     );
   }
 
@@ -232,7 +265,7 @@ class CalendarWidgetState extends State<CalendarWidget> {
       transitionDuration: const Duration(milliseconds: 200),
       pageBuilder: (context, animation, secondaryAnimation) {
         return Center(
-          child: Container(
+                            child: Container(
             margin: const EdgeInsets.all(20),
             constraints: BoxConstraints(
               maxHeight: MediaQuery.of(context).size.height * 0.8,
@@ -246,9 +279,9 @@ class CalendarWidgetState extends State<CalendarWidget> {
                   color: Colors.black.withOpacity(0.3),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
-                ),
-              ],
-            ),
+                                              ),
+                                            ],
+                                          ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: TaskEdit(
@@ -275,28 +308,8 @@ class CalendarWidgetState extends State<CalendarWidget> {
       },
     ).then((result) {
       // 編集画面から戻ってきた時の処理
-      if (result != null && result is Map<String, dynamic>) {
-        _updateAppointment(appointment, result);
-      }
-    });
-  }
-
-  void _updateAppointment(Appointment oldAppointment, Map<String, dynamic> updatedTask) {
-    setState(() {
-      // 既存のAppointmentを削除
-      _appointments.removeWhere((app) => app.id == oldAppointment.id);
-      
-      // 更新されたAppointmentを追加
-      final updatedAppointment = Appointment(
-        id: oldAppointment.id,
-        startTime: updatedTask['startTime'] ?? oldAppointment.startTime,
-        endTime: updatedTask['endTime'] ?? oldAppointment.endTime,
-        subject: updatedTask['title'] ?? oldAppointment.subject,
-        color: updatedTask['color'] ?? oldAppointment.color,
-        notes: updatedTask['notes'] ?? oldAppointment.notes,
-      );
-      
-      _appointments.add(updatedAppointment);
+      // 編集が行われた場合は、Hiveから最新データを再読み込み
+      _loadTasks();
     });
   }
 }
