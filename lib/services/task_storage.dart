@@ -14,8 +14,24 @@ class TaskStorage {
       Hive.registerAdapter(TaskDataAdapter());
     }
 
-    // ボックスを開く
-    _box = await Hive.openBox<TaskData>(_boxName);
+    try {
+      // ボックスを開く
+      _box = await Hive.openBox<TaskData>(_boxName);
+    } catch (e) {
+      // 古いデータ形式で読み込みエラーが発生した場合、ボックスを削除して再作成
+      print('データ形式エラーが発生しました。古いデータをクリアします: $e');
+
+      // 既存のボックスを削除
+      try {
+        await Hive.deleteBoxFromDisk(_boxName);
+      } catch (deleteError) {
+        print('ボックス削除エラー: $deleteError');
+      }
+
+      // 新しいボックスを作成
+      _box = await Hive.openBox<TaskData>(_boxName);
+      print('新しいデータボックスを作成しました');
+    }
   }
 
   /// ボックスを取得（初期化チェック付き）
@@ -121,6 +137,40 @@ class TaskStorage {
   /// 基本タスク（画像も説明文もない）のみを取得
   static List<TaskData> getBasicTasks() {
     return _taskBox.values.where((task) => !task.hasAdditionalData()).toList();
+  }
+
+  /// 今日が期限のタスクを取得
+  static List<TaskData> getTasksDueToday() {
+    return _taskBox.values.where((task) => task.isDueToday()).toList();
+  }
+
+  /// 期限切れのタスクを取得
+  static List<TaskData> getOverdueTasks() {
+    return _taskBox.values.where((task) => task.isOverdue()).toList();
+  }
+
+  /// 指定した日付が期限のタスクを取得
+  static List<TaskData> getTasksDueOn(DateTime date) {
+    return _taskBox.values.where((task) {
+      return task.due.year == date.year &&
+          task.due.month == date.month &&
+          task.due.day == date.day;
+    }).toList();
+  }
+
+  /// 期限でソートされたタスクを取得（昇順）
+  static List<TaskData> getTasksSortedByDue() {
+    final tasks = _taskBox.values.toList();
+    tasks.sort((a, b) => a.due.compareTo(b.due));
+    return tasks;
+  }
+
+  /// 指定した期間内のタスクを取得
+  static List<TaskData> getTasksInDateRange(DateTime start, DateTime end) {
+    return _taskBox.values.where((task) {
+      return task.due.isAfter(start.subtract(const Duration(days: 1))) &&
+          task.due.isBefore(end.add(const Duration(days: 1)));
+    }).toList();
   }
 
   /// ストレージを閉じる

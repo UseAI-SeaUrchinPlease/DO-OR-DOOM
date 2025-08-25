@@ -16,6 +16,9 @@ class _TaskListScreenState extends State<TaskListScreen> {
   List<TaskData> tasks = [];
   final TextEditingController _taskController = TextEditingController();
   final TextEditingController _sentenceController = TextEditingController();
+  DateTime _selectedDueDate = DateTime.now().add(
+    const Duration(days: 1),
+  ); // デフォルトは明日
 
   @override
   void initState() {
@@ -38,6 +41,9 @@ class _TaskListScreenState extends State<TaskListScreen> {
     final task = TaskData(
       id: id,
       task: 'サンプルタスク $id',
+      due: DateTime.now().add(
+        Duration(days: Random().nextInt(7) + 1),
+      ), // 1-7日後のランダムな日付
       image: imageData,
       sentence: 'これはタスク$idのサンプル文章です。',
     );
@@ -72,65 +78,103 @@ class _TaskListScreenState extends State<TaskListScreen> {
   void _showAddTaskDialog() {
     _taskController.clear();
     _sentenceController.clear();
+    _selectedDueDate = DateTime.now().add(const Duration(days: 1)); // リセット
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('新しいタスクを追加'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: _taskController,
-                decoration: const InputDecoration(
-                  labelText: 'タスク名',
-                  border: OutlineInputBorder(),
-                ),
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('新しいタスクを追加'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: _taskController,
+                    decoration: const InputDecoration(
+                      labelText: 'タスク名',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _sentenceController,
+                    decoration: const InputDecoration(
+                      labelText: '説明文',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      const Text('期限: '),
+                      Expanded(
+                        child: Text(
+                          '${_selectedDueDate.year}/${_selectedDueDate.month.toString().padLeft(2, '0')}/${_selectedDueDate.day.toString().padLeft(2, '0')}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          final pickedDate = await showDatePicker(
+                            context: context,
+                            initialDate: _selectedDueDate,
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime.now().add(
+                              const Duration(days: 365),
+                            ),
+                          );
+                          if (pickedDate != null) {
+                            setState(() {
+                              _selectedDueDate = pickedDate;
+                            });
+                          }
+                        },
+                        child: const Text('変更'),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _sentenceController,
-                decoration: const InputDecoration(
-                  labelText: '説明文',
-                  border: OutlineInputBorder(),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('キャンセル'),
                 ),
-                maxLines: 3,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('キャンセル'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (_taskController.text.isNotEmpty) {
-                  final id = TaskStorage.getNextAvailableId();
-                  final task = TaskData(
-                    id: id,
-                    task: _taskController.text,
-                    image: _generateSampleImage(),
-                    sentence: _sentenceController.text.isNotEmpty
-                        ? _sentenceController.text
-                        : null,
-                  );
+                ElevatedButton(
+                  onPressed: () async {
+                    if (_taskController.text.isNotEmpty) {
+                      final id = TaskStorage.getNextAvailableId();
+                      final task = TaskData(
+                        id: id,
+                        task: _taskController.text,
+                        due: _selectedDueDate,
+                        image: _generateSampleImage(),
+                        sentence: _sentenceController.text.isNotEmpty
+                            ? _sentenceController.text
+                            : null,
+                      );
 
-                  await TaskStorage.saveTask(task);
-                  _loadTasks();
+                      await TaskStorage.saveTask(task);
+                      this.setState(() {
+                        _loadTasks();
+                      });
 
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text('タスク$idを追加しました')));
-                  }
-                }
-              },
-              child: const Text('追加'),
-            ),
-          ],
+                      if (context.mounted) {
+                        Navigator.of(context).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('タスク$idを追加しました')),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('追加'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -269,11 +313,23 @@ class _TaskListScreenState extends State<TaskListScreen> {
                     itemCount: tasks.length,
                     itemBuilder: (context, index) {
                       final task = tasks[index];
+                      final isOverdue = task.isOverdue();
+                      final isDueToday = task.isDueToday();
+
                       return Card(
                         margin: const EdgeInsets.only(bottom: 8),
+                        color: isOverdue
+                            ? Colors.red.shade50
+                            : isDueToday
+                            ? Colors.orange.shade50
+                            : null,
                         child: ListTile(
                           leading: CircleAvatar(
-                            backgroundColor: Colors.blue,
+                            backgroundColor: isOverdue
+                                ? Colors.red
+                                : isDueToday
+                                ? Colors.orange
+                                : Colors.blue,
                             child: Text(
                               task.id.toString(),
                               style: const TextStyle(color: Colors.white),
@@ -285,6 +341,69 @@ class _TaskListScreenState extends State<TaskListScreen> {
                             children: [
                               Text(task.sentence ?? '説明文なし'),
                               const SizedBox(height: 4),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.schedule,
+                                        size: 14,
+                                        color: isOverdue
+                                            ? Colors.red
+                                            : isDueToday
+                                            ? Colors.orange
+                                            : Colors.grey,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          '期限: ${task.getDueDateString()}',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: isOverdue
+                                                ? Colors.red
+                                                : isDueToday
+                                                ? Colors.orange
+                                                : Colors.grey,
+                                            fontWeight: isOverdue || isDueToday
+                                                ? FontWeight.bold
+                                                : FontWeight.normal,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  if (isOverdue)
+                                    const Text(
+                                      '期限切れ',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.red,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    )
+                                  else if (isDueToday)
+                                    const Text(
+                                      '今日が期限',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.orange,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    )
+                                  else
+                                    Text(
+                                      'あと${task.daysUntilDue()}日',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
                               Text(
                                 '画像データ: ${task.getImageSize()} bytes',
                                 style: const TextStyle(
@@ -340,14 +459,89 @@ class _TaskListScreenState extends State<TaskListScreen> {
     final result = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
-        return TaskEdit(taskId: task.id);
+        return AlertDialog(
+          title: Text('タスク詳細 (ID: ${task.id})'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'タスク名:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(task.task),
+                const SizedBox(height: 16),
+                const Text(
+                  '期限:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Row(
+                  children: [
+                    Text(task.getDueDateString()),
+                    const SizedBox(width: 8),
+                    if (task.isOverdue())
+                      const Chip(
+                        label: Text('期限切れ'),
+                        backgroundColor: Colors.red,
+                        labelStyle: TextStyle(color: Colors.white),
+                      )
+                    else if (task.isDueToday())
+                      const Chip(
+                        label: Text('今日が期限'),
+                        backgroundColor: Colors.orange,
+                        labelStyle: TextStyle(color: Colors.white),
+                      )
+                    else
+                      Chip(
+                        label: Text('あと${task.daysUntilDue()}日'),
+                        backgroundColor: Colors.blue,
+                        labelStyle: const TextStyle(color: Colors.white),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  '説明文:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(task.sentence ?? '説明文なし'),
+                const SizedBox(height: 16),
+                const Text(
+                  '画像データ:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text('${task.getImageSize()} bytes'),
+                if (task.image != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        '画像データ\n(バイナリ)',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('閉じる'),
+            ),
+          ],
+        );
       },
     );
-
-    // タスクが更新された場合はリストを再読み込み
-    if (result == true) {
-      _loadTasks();
-    }
   }
 
   @override
