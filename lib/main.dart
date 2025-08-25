@@ -1,13 +1,6 @@
 import 'package:flutter/material.dart';
-import 'services/task_storage.dart';
-import 'screens/task_list_screen.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  // Hiveストレージを初期化
-  await TaskStorage.init();
-
+void main() {
   runApp(const MainApp());
 }
 
@@ -16,10 +9,12 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'DO OR DOOM - Task Storage',
-      theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
-      home: const TaskListScreen(),
+    return const MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: Text('Hello World!'),
+        ),
+      ),
     );
   }
 }
