@@ -56,13 +56,15 @@ class TaskStorageV2 {
     return _storage.exists(id);
   }
 
-  /// テキスト検索（タスク名または文章で検索）
+  /// テキスト検索（タスク名、description、sentence1、sentence2で検索）
   static List<TaskData> searchTasks(String query) {
     final lowerQuery = query.toLowerCase();
     return _storage.search(
       (task) =>
           task.task.toLowerCase().contains(lowerQuery) ||
-          (task.sentence?.toLowerCase().contains(lowerQuery) ?? false),
+          (task.description?.toLowerCase().contains(lowerQuery) ?? false) ||
+          (task.sentence1?.toLowerCase().contains(lowerQuery) ?? false) ||
+          (task.sentence2?.toLowerCase().contains(lowerQuery) ?? false),
     );
   }
 
@@ -79,34 +81,54 @@ class TaskStorageV2 {
     return ids.last + 1;
   }
 
-  /// 画像付きタスクのみを取得
+  /// 画像付きタスクのみを取得（どちらかの画像があるもの）
   static List<TaskData> getTasksWithImages() {
-    return _storage.search((task) => task.hasImage());
+    return _storage.search((task) => task.hasAnyImage());
   }
 
   /// 画像なしタスクのみを取得
   static List<TaskData> getTasksWithoutImages() {
-    return _storage.search((task) => !task.hasImage());
+    return _storage.search((task) => !task.hasAnyImage());
   }
 
-  /// 説明文付きタスクのみを取得
-  static List<TaskData> getTasksWithSentences() {
-    return _storage.search((task) => task.hasSentence());
+  /// descriptionありタスクのみを取得
+  static List<TaskData> getTasksWithDescription() {
+    return _storage.search((task) => task.hasDescription());
   }
 
-  /// 説明文なしタスクのみを取得
-  static List<TaskData> getTasksWithoutSentences() {
-    return _storage.search((task) => !task.hasSentence());
+  /// descriptionなしタスクのみを取得
+  static List<TaskData> getTasksWithoutDescription() {
+    return _storage.search((task) => !task.hasDescription());
   }
 
-  /// 完全なタスク（画像と説明文の両方を持つ）のみを取得
-  static List<TaskData> getCompleteTasks() {
-    return _storage.search((task) => task.isComplete());
+  /// sentence1ありタスクのみを取得
+  static List<TaskData> getTasksWithSentence1() {
+    return _storage.search((task) => task.hasSentence1());
   }
 
-  /// 基本タスク（画像も説明文もない）のみを取得
-  static List<TaskData> getBasicTasks() {
-    return _storage.search((task) => !task.hasAdditionalData());
+  /// sentence1なしタスクのみを取得
+  static List<TaskData> getTasksWithoutSentence1() {
+    return _storage.search((task) => !task.hasSentence1());
+  }
+
+  /// sentence2ありタスクのみを取得
+  static List<TaskData> getTasksWithSentence2() {
+    return _storage.search((task) => task.hasSentence2());
+  }
+
+  /// sentence2なしタスクのみを取得
+  static List<TaskData> getTasksWithoutSentence2() {
+    return _storage.search((task) => !task.hasSentence2());
+  }
+
+  /// 不完全なデータを持つタスク（image1, image2, sentence1, sentence2のいずれかがnull）を取得
+  static List<TaskData> getIncompleteDataTasks() {
+    return _storage.search((task) => task.hasIncompleteData());
+  }
+
+  /// 完全なデータを持つタスク（すべてのフィールドがnullでない）を取得
+  static List<TaskData> getCompleteDataTasks() {
+    return _storage.search((task) => !task.hasIncompleteData());
   }
 
   /// タスクを完了日順でソート取得（IDの昇順）
@@ -116,9 +138,19 @@ class TaskStorageV2 {
     return tasks;
   }
 
-  /// 指定した文字数以上の説明文を持つタスクを取得
-  static List<TaskData> getTasksByMinSentenceLength(int minLength) {
-    return _storage.search((task) => task.getSentenceLength() >= minLength);
+  /// 指定した文字数以上のdescriptionを持つタスクを取得
+  static List<TaskData> getTasksByMinDescriptionLength(int minLength) {
+    return _storage.search((task) => task.getDescriptionLength() >= minLength);
+  }
+
+  /// 指定した文字数以上のsentence1を持つタスクを取得
+  static List<TaskData> getTasksByMinSentence1Length(int minLength) {
+    return _storage.search((task) => task.getSentence1Length() >= minLength);
+  }
+
+  /// 指定した文字数以上のsentence2を持つタスクを取得
+  static List<TaskData> getTasksByMinSentence2Length(int minLength) {
+    return _storage.search((task) => task.getSentence2Length() >= minLength);
   }
 
   /// ページング機能付きタスク取得
@@ -145,26 +177,45 @@ class TaskStorageV2 {
   /// 統計情報を取得
   static Map<String, dynamic> getStatistics() {
     final allTasks = _storage.getAll();
-    final withImages = allTasks.where((task) => task.hasImage()).length;
-    final withSentences = allTasks.where((task) => task.hasSentence()).length;
+    final withImages = allTasks.where((task) => task.hasAnyImage()).length;
+    final withDescription = allTasks
+        .where((task) => task.hasDescription())
+        .length;
     final totalImageSize = allTasks
-        .where((task) => task.hasImage())
-        .fold<int>(0, (sum, task) => sum + task.getImageSize());
+        .where((task) => task.hasAnyImage())
+        .fold<int>(0, (sum, task) => sum + task.getTotalImageSize());
 
     return {
       'totalTasks': allTasks.length,
       'tasksWithImages': withImages,
       'tasksWithoutImages': allTasks.length - withImages,
-      'tasksWithSentences': withSentences,
-      'tasksWithoutSentences': allTasks.length - withSentences,
+      'tasksWithDescription': withDescription,
+      'tasksWithoutDescription': allTasks.length - withDescription,
       'completeTasks': allTasks.where((task) => task.isComplete()).length,
+      'incompleteDataTasks': allTasks
+          .where((task) => task.hasIncompleteData())
+          .length,
       'basicTasks': allTasks.where((task) => !task.hasAdditionalData()).length,
       'totalImageSizeBytes': totalImageSize,
-      'averageSentenceLength': allTasks.isEmpty
+      'averageDescriptionLength': allTasks.isEmpty
           ? 0.0
           : allTasks.fold<int>(
                   0,
-                  (sum, task) => sum + task.getSentenceLength(),
+                  (sum, task) => sum + task.getDescriptionLength(),
+                ) /
+                allTasks.length,
+      'averageSentence1Length': allTasks.isEmpty
+          ? 0.0
+          : allTasks.fold<int>(
+                  0,
+                  (sum, task) => sum + task.getSentence1Length(),
+                ) /
+                allTasks.length,
+      'averageSentence2Length': allTasks.isEmpty
+          ? 0.0
+          : allTasks.fold<int>(
+                  0,
+                  (sum, task) => sum + task.getSentence2Length(),
                 ) /
                 allTasks.length,
     };
