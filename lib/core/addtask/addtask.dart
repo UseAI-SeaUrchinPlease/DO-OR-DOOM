@@ -311,12 +311,7 @@ class _AddTaskWidgetState extends State<AddTaskWidget> {
 
   void _addTask() {
     if (_titleController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('タスク名を入力してください'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      // タスク名が空の場合は処理を終了（通知なし）
       return;
     }
 
@@ -333,12 +328,7 @@ class _AddTaskWidgetState extends State<AddTaskWidget> {
 
     widget.onTaskAdded?.call(taskData);
     
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('タスクが追加されました！'),
-        backgroundColor: Color(0xFF4CAF50),
-      ),
-    );
+    // タスク追加完了（通知なし）
 
     _clearForm();
   }
