@@ -1,9 +1,9 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../models/task_data.dart';
-import '../services/task_storage.dart';
-import '../task_edit.dart';
+import '../../../core/models/task_data.dart';
+import '../../../core/services/task_storage.dart';
+import '../../edit/task_edit.dart';
 
 class TaskListScreen extends StatefulWidget {
   const TaskListScreen({super.key});
