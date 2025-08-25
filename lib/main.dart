@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'core/services/task_storage.dart';
 import 'feat/root/stub/task_list_screen.dart';
-import 'ai_diary.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,7 +19,7 @@ class MainApp extends StatelessWidget {
     return MaterialApp(
       title: 'DO OR DOOM - Task Storage',
       theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
-      home: const AiDiary(),
+      home: const TaskListScreen(),
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'package:do_or_doom/feat/ai_diary/ai_diary.dart';
 import 'package:flutter/material.dart';
 import 'widgets/task_name_section.dart';
 import 'widgets/due_date_section.dart';
@@ -170,16 +171,7 @@ class _TaskEditState extends State<TaskEdit> {
       showDialog(
         context: context,
         builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('AI絵日記'),
-            content: const Text('AI絵日記機能を開始します！'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('OK'),
-              ),
-            ],
-          );
+          return AiDiary();
         },
       );
     });
