@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
-import 'package:do_or_doom/models/task_data.dart';
+import 'package:do_or_doom/core/models/task_data.dart';
 
 void main() {
   group('TaskStorage Tests', () {

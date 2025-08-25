@@ -3,8 +3,8 @@ import 'widgets/task_name_section.dart';
 import 'widgets/due_date_section.dart';
 import 'widgets/details_section.dart';
 import 'widgets/ai_button.dart';
-import 'models/task_data.dart';
-import 'services/task_storage.dart';
+import '../../core/models/task_data.dart';
+import '../../core/services/task_storage.dart';
 
 class TaskEdit extends StatefulWidget {
   final int? taskId; // タスクID（nullの場合は新規作成）
