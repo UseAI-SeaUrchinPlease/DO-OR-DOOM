@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'widgets/task_name_section.dart';
+import 'widgets/due_date_section.dart';
+import 'widgets/details_section.dart';
+import 'widgets/ai_button.dart';
 import 'models/task_data.dart';
 import 'services/task_storage.dart';
 
@@ -53,6 +57,20 @@ class _TaskEditState extends State<TaskEdit> {
     super.dispose();
   }
 
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDueDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null && picked != _selectedDueDate) {
+      setState(() {
+        _selectedDueDate = picked;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -87,61 +105,22 @@ class _TaskEditState extends State<TaskEdit> {
               ],
 
               // タスク名セクション
-              TextField(
-                controller: _taskNameController,
-                decoration: const InputDecoration(
-                  labelText: 'タスク名',
-                  border: OutlineInputBorder(),
-                ),
-              ),
+              TaskNameSection(controller: _taskNameController),
               const SizedBox(height: 16),
 
               // 期日セクション
-              Row(
-                children: [
-                  const Text('期限: '),
-                  Expanded(
-                    child: Text(
-                      '${_selectedDueDate.year}/${_selectedDueDate.month.toString().padLeft(2, '0')}/${_selectedDueDate.day.toString().padLeft(2, '0')}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () async {
-                      final pickedDate = await showDatePicker(
-                        context: context,
-                        initialDate: _selectedDueDate,
-                        firstDate: DateTime.now(),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                      );
-                      if (pickedDate != null) {
-                        setState(() {
-                          _selectedDueDate = pickedDate;
-                        });
-                      }
-                    },
-                    child: const Text('変更'),
-                  ),
-                ],
+              DueDateSection(
+                selectedDate: _selectedDueDate,
+                onDateTap: () => _selectDate(context),
               ),
               const SizedBox(height: 16),
 
               // 詳細セクション
-              TextField(
-                controller: _detailsController,
-                decoration: const InputDecoration(
-                  labelText: '詳細',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 8,
-              ),
+              DetailsSection(controller: _detailsController),
               const SizedBox(height: 28),
 
               // AIボタンセクション
-              ElevatedButton(
-                onPressed: () => _showAIAlert(context),
-                child: const Text('AI絵日記'),
-              ),
+              AIButton(onPressed: () => _showAIAlert(context)),
             ],
           ),
         ),
@@ -164,7 +143,7 @@ class _TaskEditState extends State<TaskEdit> {
       final updatedTask = TaskData(
         id: _currentTask!.id,
         task: _taskNameController.text,
-        due: _selectedDueDate, // 選択された期限を使用
+        due: _selectedDueDate,
         sentence: _detailsController.text.isNotEmpty
             ? _detailsController.text
             : null,

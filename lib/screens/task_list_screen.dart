@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/task_data.dart';
 import '../services/task_storage.dart';
+import '../task_edit.dart';
 
 class TaskListScreen extends StatefulWidget {
   const TaskListScreen({super.key});
@@ -454,93 +455,18 @@ class _TaskListScreenState extends State<TaskListScreen> {
     );
   }
 
-  void _showTaskDetails(TaskData task) {
-    showDialog(
+  void _showTaskDetails(TaskData task) async {
+    final result = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('タスク詳細 (ID: ${task.id})'),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'タスク名:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Text(task.task),
-                const SizedBox(height: 16),
-                const Text(
-                  '期限:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Row(
-                  children: [
-                    Text(task.getDueDateString()),
-                    const SizedBox(width: 8),
-                    if (task.isOverdue())
-                      const Chip(
-                        label: Text('期限切れ'),
-                        backgroundColor: Colors.red,
-                        labelStyle: TextStyle(color: Colors.white),
-                      )
-                    else if (task.isDueToday())
-                      const Chip(
-                        label: Text('今日が期限'),
-                        backgroundColor: Colors.orange,
-                        labelStyle: TextStyle(color: Colors.white),
-                      )
-                    else
-                      Chip(
-                        label: Text('あと${task.daysUntilDue()}日'),
-                        backgroundColor: Colors.blue,
-                        labelStyle: const TextStyle(color: Colors.white),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  '説明文:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Text(task.sentence ?? '説明文なし'),
-                const SizedBox(height: 16),
-                const Text(
-                  '画像データ:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Text('${task.getImageSize()} bytes'),
-                if (task.image != null) ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        '画像データ\n(バイナリ)',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 12),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('閉じる'),
-            ),
-          ],
-        );
+        return TaskEdit(taskId: task.id);
       },
     );
+
+    // タスクが更新された場合はリストを再読み込み
+    if (result == true) {
+      _loadTasks();
+    }
   }
 
   @override
