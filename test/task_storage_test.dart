@@ -57,7 +57,7 @@ void main() {
       final tasks = [
         TaskData(id: 1, task: 'タスク1', sentence: '文章1'),
         TaskData(id: 2, task: 'タスク2', sentence: '文章2'),
-        TaskData(id: 3, task: 'タスク3', sentence: '文章3'),
+        TaskData(id: 3, task: 'タスク3'), // sentenceなし
       ];
 
       // すべて保存
@@ -122,7 +122,7 @@ void main() {
           .where(
             (task) =>
                 task.task.toLowerCase().contains('テスト') ||
-                task.sentence.toLowerCase().contains('テスト'),
+                (task.sentence?.toLowerCase().contains('テスト') ?? false),
           )
           .toList();
 
@@ -149,24 +149,23 @@ void main() {
       expect(getNextAvailableId(), equals(1));
 
       // いくつかタスクを追加
-      await testBox.put(1, TaskData(id: 1, task: 'タスク1', sentence: '文章1'));
-      await testBox.put(2, TaskData(id: 2, task: 'タスク2', sentence: '文章2'));
-      await testBox.put(4, TaskData(id: 4, task: 'タスク4', sentence: '文章4'));
+      await testBox.put(1, TaskData(id: 1, task: 'タスク1'));
+      await testBox.put(2, TaskData(id: 2, task: 'タスク2'));
+      await testBox.put(4, TaskData(id: 4, task: 'タスク4'));
 
       // 次のIDは3であることを確認
       expect(getNextAvailableId(), equals(3));
 
       // ID3を追加
-      await testBox.put(3, TaskData(id: 3, task: 'タスク3', sentence: '文章3'));
+      await testBox.put(3, TaskData(id: 3, task: 'タスク3'));
 
       // 次のIDは5であることを確認
       expect(getNextAvailableId(), equals(5));
     });
-
     test('タスク数の取得', () async {
       expect(testBox.length, equals(0));
 
-      await testBox.put(1, TaskData(id: 1, task: 'タスク1', sentence: '文章1'));
+      await testBox.put(1, TaskData(id: 1, task: 'タスク1'));
       expect(testBox.length, equals(1));
 
       await testBox.put(2, TaskData(id: 2, task: 'タスク2', sentence: '文章2'));
@@ -179,7 +178,14 @@ void main() {
     test('全タスクの削除', () async {
       // いくつかタスクを追加
       for (int i = 1; i <= 5; i++) {
-        await testBox.put(i, TaskData(id: i, task: 'タスク$i', sentence: '文章$i'));
+        await testBox.put(
+          i,
+          TaskData(
+            id: i,
+            task: 'タスク$i',
+            sentence: i % 2 == 0 ? '文章$i' : null, // 偶数のIDのみ文章を設定
+          ),
+        );
       }
 
       expect(testBox.length, equals(5));
@@ -210,6 +216,99 @@ void main() {
       final retrievedTask = testBox.get(1);
       expect(retrievedTask!.image!.length, equals(10000));
       expect(retrievedTask.image, equals(largeImageData));
+    });
+
+    test('nullableフィールドのテスト', () async {
+      // 最小限のタスク（IDとtaskのみ）
+      final minimalTask = TaskData(id: 1, task: '最小限タスク');
+
+      await testBox.put(minimalTask.id, minimalTask);
+      final retrievedMinimal = testBox.get(1);
+
+      expect(retrievedMinimal!.id, equals(1));
+      expect(retrievedMinimal.task, equals('最小限タスク'));
+      expect(retrievedMinimal.image, isNull);
+      expect(retrievedMinimal.sentence, isNull);
+      expect(retrievedMinimal.hasImage(), isFalse);
+      expect(retrievedMinimal.hasSentence(), isFalse);
+      expect(retrievedMinimal.isComplete(), isFalse);
+      expect(retrievedMinimal.hasAdditionalData(), isFalse);
+
+      // 画像のみのタスク
+      final imageOnlyTask = TaskData(
+        id: 2,
+        task: '画像のみタスク',
+        image: Uint8List.fromList([1, 2, 3]),
+      );
+
+      await testBox.put(imageOnlyTask.id, imageOnlyTask);
+      final retrievedImageOnly = testBox.get(2);
+
+      expect(retrievedImageOnly!.hasImage(), isTrue);
+      expect(retrievedImageOnly.hasSentence(), isFalse);
+      expect(retrievedImageOnly.isComplete(), isFalse);
+      expect(retrievedImageOnly.hasAdditionalData(), isTrue);
+
+      // 説明文のみのタスク
+      final sentenceOnlyTask = TaskData(
+        id: 3,
+        task: '説明文のみタスク',
+        sentence: 'これは説明文です',
+      );
+
+      await testBox.put(sentenceOnlyTask.id, sentenceOnlyTask);
+      final retrievedSentenceOnly = testBox.get(3);
+
+      expect(retrievedSentenceOnly!.hasImage(), isFalse);
+      expect(retrievedSentenceOnly.hasSentence(), isTrue);
+      expect(retrievedSentenceOnly.isComplete(), isFalse);
+      expect(retrievedSentenceOnly.hasAdditionalData(), isTrue);
+
+      // 完全なタスク
+      final completeTask = TaskData(
+        id: 4,
+        task: '完全タスク',
+        image: Uint8List.fromList([1, 2, 3]),
+        sentence: '完全な説明文',
+      );
+
+      await testBox.put(completeTask.id, completeTask);
+      final retrievedComplete = testBox.get(4);
+
+      expect(retrievedComplete!.hasImage(), isTrue);
+      expect(retrievedComplete.hasSentence(), isTrue);
+      expect(retrievedComplete.isComplete(), isTrue);
+      expect(retrievedComplete.hasAdditionalData(), isTrue);
+    });
+
+    test('ヘルパーメソッドのテスト', () async {
+      final tasks = [
+        TaskData(id: 1, task: 'タスク1'), // 最小限
+        TaskData(
+          id: 2,
+          task: 'タスク2',
+          image: Uint8List.fromList([1, 2, 3]),
+        ), // 画像のみ
+        TaskData(id: 3, task: 'タスク3', sentence: '説明文'), // 説明文のみ
+        TaskData(
+          id: 4,
+          task: 'タスク4',
+          image: Uint8List.fromList([4, 5, 6]),
+          sentence: '完全',
+        ), // 完全
+      ];
+
+      for (final task in tasks) {
+        await testBox.put(task.id, task);
+      }
+
+      // サイズ系メソッドのテスト
+      expect(testBox.get(1)!.getImageSize(), equals(0));
+      expect(testBox.get(1)!.getSentenceLength(), equals(0));
+      expect(testBox.get(2)!.getImageSize(), equals(3));
+      expect(testBox.get(3)!.getSentenceLength(), equals(3));
+      expect(testBox.get(4)!.getImageSize(), equals(3));
+      expect(testBox.get(4)!.getSentenceLength(), equals(2));
     });
   });
 }

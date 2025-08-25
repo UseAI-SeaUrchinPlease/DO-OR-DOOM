@@ -20,7 +20,7 @@ class TaskDataAdapter extends TypeAdapter<TaskData> {
       id: fields[0] as int,
       task: fields[1] as String,
       image: fields[2] as Uint8List?,
-      sentence: fields[3] as String,
+      sentence: fields[3] as String?,
     );
   }
 

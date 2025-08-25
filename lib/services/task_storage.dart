@@ -69,7 +69,8 @@ class TaskStorage {
         .where(
           (task) =>
               task.task.toLowerCase().contains(query.toLowerCase()) ||
-              task.sentence.toLowerCase().contains(query.toLowerCase()),
+              (task.sentence?.toLowerCase().contains(query.toLowerCase()) ??
+                  false),
         )
         .toList();
   }
@@ -90,6 +91,36 @@ class TaskStorage {
       }
     }
     return ids.last + 1;
+  }
+
+  /// 画像付きタスクのみを取得
+  static List<TaskData> getTasksWithImages() {
+    return _taskBox.values.where((task) => task.hasImage()).toList();
+  }
+
+  /// 画像なしタスクのみを取得
+  static List<TaskData> getTasksWithoutImages() {
+    return _taskBox.values.where((task) => !task.hasImage()).toList();
+  }
+
+  /// 説明文付きタスクのみを取得
+  static List<TaskData> getTasksWithSentences() {
+    return _taskBox.values.where((task) => task.hasSentence()).toList();
+  }
+
+  /// 説明文なしタスクのみを取得
+  static List<TaskData> getTasksWithoutSentences() {
+    return _taskBox.values.where((task) => !task.hasSentence()).toList();
+  }
+
+  /// 完全なタスク（画像と説明文の両方を持つ）のみを取得
+  static List<TaskData> getCompleteTasks() {
+    return _taskBox.values.where((task) => task.isComplete()).toList();
+  }
+
+  /// 基本タスク（画像も説明文もない）のみを取得
+  static List<TaskData> getBasicTasks() {
+    return _taskBox.values.where((task) => !task.hasAdditionalData()).toList();
   }
 
   /// ストレージを閉じる

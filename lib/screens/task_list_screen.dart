@@ -105,14 +105,15 @@ class _TaskListScreenState extends State<TaskListScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
-                if (_taskController.text.isNotEmpty &&
-                    _sentenceController.text.isNotEmpty) {
+                if (_taskController.text.isNotEmpty) {
                   final id = TaskStorage.getNextAvailableId();
                   final task = TaskData(
                     id: id,
                     task: _taskController.text,
                     image: _generateSampleImage(),
-                    sentence: _sentenceController.text,
+                    sentence: _sentenceController.text.isNotEmpty
+                        ? _sentenceController.text
+                        : null,
                   );
 
                   await TaskStorage.saveTask(task);
@@ -281,10 +282,10 @@ class _TaskListScreenState extends State<TaskListScreen> {
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(task.sentence),
+                              Text(task.sentence ?? '説明文なし'),
                               const SizedBox(height: 4),
                               Text(
-                                '画像データ: ${task.image?.length ?? 0} bytes',
+                                '画像データ: ${task.getImageSize()} bytes',
                                 style: const TextStyle(
                                   fontSize: 12,
                                   color: Colors.grey,
@@ -355,13 +356,13 @@ class _TaskListScreenState extends State<TaskListScreen> {
                   '説明文:',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                Text(task.sentence),
+                Text(task.sentence ?? '説明文なし'),
                 const SizedBox(height: 16),
                 const Text(
                   '画像データ:',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                Text('${task.image?.length ?? 0} bytes'),
+                Text('${task.getImageSize()} bytes'),
                 if (task.image != null) ...[
                   const SizedBox(height: 8),
                   Container(
