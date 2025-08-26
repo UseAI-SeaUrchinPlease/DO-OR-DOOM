@@ -13,6 +13,7 @@ class RootWidget extends StatefulWidget {
 
 class _RootWidgetState extends State<RootWidget> {
   final GlobalKey<CalendarWidgetState> _calendarKey = GlobalKey<CalendarWidgetState>();
+  final GlobalKey<TaskListWidgetState> _taskListKey = GlobalKey<TaskListWidgetState>();
 
 
 
@@ -55,11 +56,13 @@ class _RootWidgetState extends State<RootWidget> {
               
               // タスク一覧（DBから自動取得）
               TaskListWidget(
+                key: _taskListKey,
                 onTaskTap: (task) {
                   // タスク詳細画面への遷移（将来実装、通知なし）
                 },
                 onTaskCompletedChanged: (task) {
-                  // チェックボックス変更処理（通知なし）
+                  // タスクが削除されたら、カレンダーも更新
+                  _calendarKey.currentState?.refreshTasks();
                 },
               ),
             ],
