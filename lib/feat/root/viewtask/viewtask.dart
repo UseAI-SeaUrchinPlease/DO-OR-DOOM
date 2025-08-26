@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
+import '../../../core/models/task_data.dart';
+import '../../../core/services/task_storage.dart';
 
 // タスク一覧表示用のモデルクラス
 class TaskItem {
@@ -47,7 +49,29 @@ class TaskItem {
     );
   }
 
-  // Appointmentから変換
+  // TaskDataから変換
+  factory TaskItem.fromTaskData(TaskData taskData) {
+    return TaskItem(
+      id: taskData.id.toString(),
+      title: taskData.task,
+      date: taskData.due,
+      dueTime: null, // TaskDataには時間情報がないため
+      description: taskData.sentence,
+      color: taskData.isOverdue() 
+          ? Colors.red 
+          : taskData.isDueToday() 
+              ? Colors.orange 
+              : const Color(0xFF6750A4),
+      priority: taskData.isOverdue() 
+          ? TaskPriority.urgent 
+          : taskData.isDueToday() 
+              ? TaskPriority.high 
+              : TaskPriority.medium,
+      isCompleted: false, // 現在のTaskDataには完了状態がないため
+    );
+  }
+
+  // Appointmentから変換（カレンダー用）
   factory TaskItem.fromAppointment(Appointment appointment) {
     return TaskItem(
       id: appointment.id?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
@@ -71,13 +95,11 @@ enum TaskPriority {
 
 // タスク一覧表示ウィジェット
 class TaskListWidget extends StatefulWidget {
-  final List<TaskItem> tasks;
   final Function(TaskItem)? onTaskTap;
   final Function(TaskItem)? onTaskCompletedChanged;
 
   const TaskListWidget({
     super.key,
-    required this.tasks,
     this.onTaskTap,
     this.onTaskCompletedChanged,
   });
@@ -87,23 +109,31 @@ class TaskListWidget extends StatefulWidget {
 }
 
 class _TaskListWidgetState extends State<TaskListWidget> {
-  late List<TaskItem> _tasks;
+  List<TaskItem> _tasks = [];
   bool _showCompletedTasks = false; // 完了タスクの表示切り替え
   final Set<String> _pendingCompletionTasks = {}; // 完了処理中のタスクID
   final Map<String, Timer> _pendingTimers = {}; // 完了処理中のTimer管理
+  final Map<String, bool> _completedTasks = {}; // ローカル完了状態管理
 
   @override
   void initState() {
     super.initState();
-    _tasks = List.from(widget.tasks);
+    _loadTasksFromDB();
   }
 
-  @override
-  void didUpdateWidget(TaskListWidget oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.tasks != widget.tasks) {
-      _tasks = List.from(widget.tasks);
-    }
+  // DBからタスクを読み込む
+  void _loadTasksFromDB() {
+    final taskDataList = TaskStorage.getAllTasks();
+    setState(() {
+      _tasks = taskDataList.map((taskData) => TaskItem.fromTaskData(taskData)).toList();
+      // 日付順にソート（期限が近い順）
+      _tasks.sort((a, b) => a.date.compareTo(b.date));
+    });
+  }
+
+  // タスクの再読み込み（外部から呼び出し可能）
+  void refreshTasks() {
+    _loadTasksFromDB();
   }
 
   @override
@@ -118,10 +148,10 @@ class _TaskListWidgetState extends State<TaskListWidget> {
 
   @override
   Widget build(BuildContext context) {
-    // 表示するタスクをフィルタリング
+    // 表示するタスクをフィルタリング（ローカル完了状態を考慮）
     final displayTasks = _showCompletedTasks 
-        ? _tasks.where((task) => task.isCompleted).toList()
-        : _tasks.where((task) => !task.isCompleted).toList();
+        ? _tasks.where((task) => _completedTasks[task.id] == true).toList()
+        : _tasks.where((task) => _completedTasks[task.id] != true).toList();
     
     return Container(
       decoration: BoxDecoration(
@@ -204,7 +234,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                   opacity: isPending ? 0.5 : 1.0,
                   duration: const Duration(milliseconds: 300),
                   child: TaskItemWidget(
-                    task: task,
+                    task: task.copyWith(isCompleted: _completedTasks[task.id] ?? false),
                     onTap: () => _showTaskDetailDialog(context, task),
                     onCompletedChanged: (isCompleted) => _handleTaskCompletion(task, isCompleted),
                     isPending: isPending,
@@ -261,12 +291,10 @@ class _TaskListWidgetState extends State<TaskListWidget> {
           setState(() {
             _pendingCompletionTasks.remove(task.id);
             _pendingTimers.remove(task.id);
-            final taskIndex = _tasks.indexWhere((t) => t.id == task.id);
-            if (taskIndex != -1) {
-              _tasks[taskIndex] = task.copyWith(isCompleted: true);
-            }
+            _completedTasks[task.id] = true;
           });
-          widget.onTaskCompletedChanged?.call(task);
+          // TODO: 将来的にはDBにも完了状態を保存
+          widget.onTaskCompletedChanged?.call(task.copyWith(isCompleted: true));
         }
       });
 
@@ -288,12 +316,9 @@ class _TaskListWidgetState extends State<TaskListWidget> {
       } else {
         // 通常の完了済みタスクのチェック解除：即座に処理
         setState(() {
-          final taskIndex = _tasks.indexWhere((t) => t.id == task.id);
-          if (taskIndex != -1) {
-            _tasks[taskIndex] = task.copyWith(isCompleted: false);
-          }
+          _completedTasks[task.id] = false;
         });
-        widget.onTaskCompletedChanged?.call(task);
+        widget.onTaskCompletedChanged?.call(task.copyWith(isCompleted: false));
       }
     }
   }
