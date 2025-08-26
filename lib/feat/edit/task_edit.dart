@@ -129,7 +129,7 @@ class _TaskEditState extends State<TaskEdit> {
 
               // AIボタンセクション
               AIButton(onPressed: () => _showAIAlert(context)),
-              
+
               const SizedBox(height: 20),
             ],
           ),
@@ -210,7 +210,7 @@ class _TaskEditState extends State<TaskEdit> {
       showDialog(
         context: context,
         builder: (BuildContext context) {
-          return AiDiary();
+          return AiDiary(taskId: widget.taskId);
         },
       );
     });

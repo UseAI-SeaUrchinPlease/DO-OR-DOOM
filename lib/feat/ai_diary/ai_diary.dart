@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../core/services/task_storage.dart';
+import '../../core/services/ai_diary_service.dart';
 import '../../core/models/task_data.dart';
 
 class AiDiary extends StatefulWidget {
-  const AiDiary({super.key});
+  final int? taskId; // 特定のタスクIDを指定する場合
+
+  const AiDiary({super.key, this.taskId});
 
   @override
   State<AiDiary> createState() => _AiDiaryState();
@@ -13,21 +16,95 @@ class _AiDiaryState extends State<AiDiary> {
   bool isDoingSelected = false; // false: しないと？, true: すると？
   List<TaskData> tasks = [];
   TaskData? selectedTask;
+  AiDiaryResponse? aiDiaryData;
+  bool isLoading = false;
+  String? errorMessage;
 
   @override
   void initState() {
     super.initState();
     _loadTasks();
+    _fetchAiDiaryData();
   }
 
   void _loadTasks() {
     setState(() {
-      tasks = TaskStorage.getAllTasks();
-      // 画像付きのタスクがある場合は最初の一つを選択
-      selectedTask = TaskStorage.getTasksWithImages().isNotEmpty
-          ? TaskStorage.getTasksWithImages().first
-          : null;
+      if (widget.taskId != null) {
+        // 指定されたタスクIDのタスクを取得
+        final task = TaskStorage.getTask(widget.taskId!);
+        if (task != null) {
+          tasks = [task];
+          selectedTask = task;
+        } else {
+          tasks = [];
+          selectedTask = null;
+        }
+      } else {
+        // タスクIDが指定されていない場合は全タスクを取得
+        tasks = TaskStorage.getAllTasks();
+        // 最初のタスクを選択（画像の有無に関係なく）
+        selectedTask = tasks.isNotEmpty ? tasks.first : null;
+      }
     });
+  }
+
+  Future<void> _fetchAiDiaryData() async {
+    // 選択されたタスクがない場合は何もしない
+    if (selectedTask == null) {
+      setState(() {
+        errorMessage = widget.taskId != null
+            ? 'タスクID ${widget.taskId} が見つかりません'
+            : '表示するタスクがありません';
+        isLoading = false;
+      });
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+    try {
+      // 選択されたタスクのみをAPIに送信
+      final response = await AiDiaryService.fetchAiDiary([selectedTask!]);
+
+      // APIデータで選択されたタスクのsentence1/2とimage1/2を更新
+      await _updateTaskWithApiData(response);
+
+      setState(() {
+        aiDiaryData = response;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        errorMessage = e.toString();
+        isLoading = false;
+      });
+    }
+  }
+
+  /// APIデータで選択されたタスクのsentence1/2とimage1/2を更新
+  Future<void> _updateTaskWithApiData(AiDiaryResponse apiData) async {
+    if (selectedTask == null) return;
+
+    // 選択されたタスクのsentence1/2とimage1/2を更新
+    final updatedTask = TaskData(
+      id: selectedTask!.id,
+      task: selectedTask!.task,
+      due: selectedTask!.due,
+      description: selectedTask!.description,
+      sentence1: apiData.negative.text, // 「しないと？」のテキスト
+      sentence2: apiData.positive.text, // 「すると？」のテキスト
+      image1: apiData.negative.imageData, // 「しないと？」の画像
+      image2: apiData.positive.imageData, // 「すると？」の画像
+    );
+
+    // タスクをストレージに保存
+    await TaskStorage.updateTask(updatedTask);
+
+    // タスクリストを再読み込み
+    _loadTasks();
   }
 
   @override
@@ -132,12 +209,14 @@ class _AiDiaryState extends State<AiDiary> {
             SizedBox(
               width: double.infinity,
               height: 220,
-              child: Container(
-                decoration: BoxDecoration(
-                  image: _getImageDecoration(),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : Container(
+                      decoration: BoxDecoration(
+                        image: _getImageDecoration(),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
             ),
 
             const SizedBox(height: 16),
@@ -151,19 +230,50 @@ class _AiDiaryState extends State<AiDiary> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 padding: const EdgeInsets.all(16), // padding を設ける
-                child: SingleChildScrollView(
-                  child: Text(
-                    _getDisplayText(),
-                    style: TextStyle(
-                      color: const Color(0xFF1D1B20),
-                      fontSize: 14,
-                      fontFamily: 'Roboto',
-                      fontWeight: FontWeight.w400,
-                      height: 1.57,
-                      letterSpacing: 0.56,
-                    ),
-                  ),
-                ),
+                child: isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : errorMessage != null
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.error, color: Colors.red),
+                            const SizedBox(height: 8),
+                            Text(
+                              'エラーが発生しました',
+                              style: TextStyle(
+                                color: Colors.red,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              errorMessage!,
+                              style: TextStyle(color: Colors.red, fontSize: 12),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: _fetchAiDiaryData,
+                              child: const Text('再試行'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : SingleChildScrollView(
+                        child: Text(
+                          _getDisplayText(),
+                          style: TextStyle(
+                            color: const Color(0xFF1D1B20),
+                            fontSize: 14,
+                            fontFamily: 'Roboto',
+                            fontWeight: FontWeight.w400,
+                            height: 1.57,
+                            letterSpacing: 0.56,
+                          ),
+                        ),
+                      ),
               ),
             ),
           ],
@@ -180,105 +290,81 @@ class _AiDiaryState extends State<AiDiary> {
 
   /// 画像の装飾を取得
   DecorationImage? _getImageDecoration() {
-    if (isDoingSelected) {
-      // 「タスクをすると？」選択時もHiveデータから取得
-      if (selectedTask?.hasAnyImage() == true) {
-        // image1が優先、なければimage2を使用
-        final imageData = selectedTask!.hasImage1()
-            ? selectedTask!.image1!
-            : selectedTask!.image2!;
+    // APIデータがある場合は優先的に使用
+    if (aiDiaryData != null) {
+      final content = isDoingSelected
+          ? aiDiaryData!.positive
+          : aiDiaryData!.negative;
+      if (content.imageData != null) {
         return DecorationImage(
-          image: MemoryImage(imageData),
-          fit: BoxFit.cover,
-        );
-      } else {
-        // 画像がない場合はデフォルト画像
-        return const DecorationImage(
-          image: AssetImage("assets/images/sacabambaspis2.png"),
-          fit: BoxFit.cover,
-        );
-      }
-    } else {
-      // 「タスクをしないと？」選択時はHiveデータから取得
-      if (selectedTask?.hasAnyImage() == true) {
-        // image1が優先、なければimage2を使用
-        final imageData = selectedTask!.hasImage1()
-            ? selectedTask!.image1!
-            : selectedTask!.image2!;
-        return DecorationImage(
-          image: MemoryImage(imageData),
-          fit: BoxFit.cover,
-        );
-      } else {
-        // 画像がない場合はデフォルト画像
-        return const DecorationImage(
-          image: AssetImage("assets/images/sacabambaspis.png"),
+          image: MemoryImage(content.imageData!),
           fit: BoxFit.cover,
         );
       }
     }
+
+    // APIデータがない場合はHiveデータから取得
+    if (selectedTask != null) {
+      if (isDoingSelected) {
+        // 「タスクをすると？」選択時 - image2（positive）を使用
+        if (selectedTask!.hasImage2()) {
+          return DecorationImage(
+            image: MemoryImage(selectedTask!.image2!),
+            fit: BoxFit.cover,
+          );
+        }
+      } else {
+        // 「タスクをしないと？」選択時 - image1（negative）を使用
+        if (selectedTask!.hasImage1()) {
+          return DecorationImage(
+            image: MemoryImage(selectedTask!.image1!),
+            fit: BoxFit.cover,
+          );
+        }
+      }
+    }
+
+    // 画像がない場合はデフォルト画像
+    return DecorationImage(
+      image: AssetImage(
+        isDoingSelected
+            ? "assets/images/sacabambaspis2.png"
+            : "assets/images/sacabambaspis.png",
+      ),
+      fit: BoxFit.cover,
+    );
   }
 
   /// 表示するテキストを取得
   String _getDisplayText() {
+    // APIデータがある場合は優先的に使用
+    if (aiDiaryData != null) {
+      final content = isDoingSelected
+          ? aiDiaryData!.positive
+          : aiDiaryData!.negative;
+      return content.text;
+    }
+
+    // APIデータがない場合はHiveデータから取得
+    if (selectedTask != null) {
+      if (isDoingSelected) {
+        // 「タスクをすると？」選択時 - sentence2（positive）を使用
+        if (selectedTask!.hasSentence2()) {
+          return selectedTask!.sentence2!;
+        }
+      } else {
+        // 「タスクをしないと？」選択時 - sentence1（negative）を使用
+        if (selectedTask!.hasSentence1()) {
+          return selectedTask!.sentence1!;
+        }
+      }
+    }
+
+    // データがない場合はデフォルトテキストを表示
     if (isDoingSelected) {
-      // 「タスクをすると？」選択時もHiveデータから取得
-      if (selectedTask != null) {
-        String displayText = '${selectedTask!.task}\n\n';
-
-        // description、sentence1、sentence2の順で表示
-        if (selectedTask!.hasDescription()) {
-          displayText += '${selectedTask!.description!}\n\n';
-        }
-        if (selectedTask!.hasSentence1()) {
-          displayText += '${selectedTask!.sentence1!}\n\n';
-        }
-        if (selectedTask!.hasSentence2()) {
-          displayText += '${selectedTask!.sentence2!}';
-        }
-
-        // 何もテキストがない場合はデフォルトテキストを表示
-        if (!selectedTask!.hasDescription() &&
-            !selectedTask!.hasSentence1() &&
-            !selectedTask!.hasSentence2()) {
-          displayText +=
-              'タスクをやったらすごい充実感！\n今日も一歩前進できました。やっぱりやるべきことをちゃんとやると気持ちがいいですね。\n\n朝早く起きて、計画通りに進められたのが良かった。最初は面倒だと思っていたけど、始めてみると意外と楽しくて、どんどん進められました。\n\n完了したタスクを見返すと、本当に達成感があります。明日もこの調子で頑張ろう！\n\nやっぱり「やる」って決めて実行すると、自分に自信が持てるし、次のタスクへのモチベーションも上がります。\n\n今度はもっと大きな目標にもチャレンジしてみたいと思います。一歩ずつでも前に進んでいる実感があって、とても嬉しいです。\n\nタスクをやって本当に良かった！';
-        }
-
-        return displayText.trim(); // 末尾の余分な改行を削除
-      } else {
-        // タスクが選択されていない場合はデフォルトテキスト
-        return 'タスクをやったらすごい充実感！\n今日も一歩前進できました。やっぱりやるべきことをちゃんとやると気持ちがいいですね。\n\n朝早く起きて、計画通りに進められたのが良かった。最初は面倒だと思っていたけど、始めてみると意外と楽しくて、どんどん進められました。\n\n完了したタスクを見返すと、本当に達成感があります。明日もこの調子で頑張ろう！\n\nやっぱり「やる」って決めて実行すると、自分に自信が持てるし、次のタスクへのモチベーションも上がります。\n\n今度はもっと大きな目標にもチャレンジしてみたいと思います。一歩ずつでも前に進んでいる実感があって、とても嬉しいです。\n\nタスクをやって本当に良かった！';
-      }
+      return 'タスクをやったらすごい充実感！\n今日も一歩前進できました。やっぱりやるべきことをちゃんとやると気持ちがいいですね。\n\n朝早く起きて、計画通りに進められたのが良かった。最初は面倒だと思っていたけど、始めてみると意外と楽しくて、どんどん進められました。\n\n完了したタスクを見返すと、本当に達成感があります。明日もこの調子で頑張ろう！\n\nやっぱり「やる」って決めて実行すると、自分に自信が持てるし、次のタスクへのモチベーションも上がります。\n\n今度はもっと大きな目標にもチャレンジしてみたいと思います。一歩ずつでも前に進んでいる実感があって、とても嬉しいです。\n\nタスクをやって本当に良かった！';
     } else {
-      // 「タスクをしないと？」選択時はHiveデータから取得
-      if (selectedTask != null) {
-        String displayText = '${selectedTask!.task}\n\n';
-
-        // description、sentence1、sentence2の順で表示
-        if (selectedTask!.hasDescription()) {
-          displayText += '${selectedTask!.description!}\n\n';
-        }
-        if (selectedTask!.hasSentence1()) {
-          displayText += '${selectedTask!.sentence1!}\n\n';
-        }
-        if (selectedTask!.hasSentence2()) {
-          displayText += '${selectedTask!.sentence2!}';
-        }
-
-        // 何もテキストがない場合はデフォルトテキストを表示
-        if (!selectedTask!.hasDescription() &&
-            !selectedTask!.hasSentence1() &&
-            !selectedTask!.hasSentence2()) {
-          displayText +=
-              'くぅ～疲れましたw これにて完結です！\n実は、ネタレスしたら代行の話を持ちかけられたのが始まりでした\n本当は話のネタなかったのですが←\nご厚意を無駄にするわけには行かないので流行りのネタで挑んでみた所存ですw\n以下、まどか達のみんなへのメッセジをどぞ\nまどか「みんな、見てくれてありがとう\nちょっと腹黒なところも見えちゃったけど・・・気にしないでね！」\nさやか「いやーありがと！\n私のかわいさは二十分に伝わったかな？」\nマミ「見てくれたのは嬉しいけどちょっと恥ずかしいわね・・・」\n京子「見てくれありがとな！\n正直、作中で言った私の気持ちは本当だよ！」\nほむら「・・・ありがと」ﾌｧｻ\nでは、\nまどか、さやか、マミ、京子、ほむら、俺「皆さんありがとうございました！」\n終\nまどか、さやか、マミ、京子、ほむら「って、なんで俺くんが！？\n改めまして、ありがとうございました！」\n本当の本当に終わり';
-        }
-
-        return displayText.trim(); // 末尾の余分な改行を削除
-      } else {
-        // タスクが選択されていない場合はデフォルトテキスト
-        return 'くぅ～疲れましたw これにて完結です！\n実は、ネタレスしたら代行の話を持ちかけられたのが始まりでした\n本当は話のネタなかったのですが←\nご厚意を無駄にするわけには行かないので流行りのネタで挑んでみた所存ですw\n以下、まどか達のみんなへのメッセジをどぞ\nまどか「みんな、見てくれてありがとう\nちょっと腹黒なところも見えちゃったけど・・・気にしないでね！」\nさやか「いやーありがと！\n私のかわいさは二十分に伝わったかな？」\nマミ「見てくれたのは嬉しいけどちょっと恥ずかしいわね・・・」\n京子「見てくれありがとな！\n正直、作中で言った私の気持ちは本当だよ！」\nほむら「・・・ありがと」ﾌｧｻ\nでは、\nまどか、さやか、マミ、京子、ほむら、俺「皆さんありがとうございました！」\n終\nまどか、さやか、マミ、京子、ほむら「って、なんで俺くんが！？\n改めまして、ありがとうございました！」\n本当の本当に終わり';
-      }
+      return 'くぅ～疲れましたw これにて完結です！\n実は、ネタレスしたら代行の話を持ちかけられたのが始まりでした\n本当は話のネタなかったのですが←\nご厚意を無駄にするわけには行かないので流行りのネタで挑んでみた所存ですw\n以下、まどか達のみんなへのメッセジをどぞ\nまどか「みんな、見てくれてありがとう\nちょっと腹黒なところも見えちゃったけど・・・気にしないでね！」\nさやか「いやーありがと！\n私のかわいさは二十分に伝わったかな？」\nマミ「見てくれたのは嬉しいけどちょっと恥ずかしいわね・・・」\n京子「見てくれありがとな！\n正直、作中で言った私の気持ちは本当だよ！」\nほむら「・・・ありがと」ﾌｧｻ\nでは、\nまどか、さやか、マミ、京子、ほむら、俺「皆さんありがとうございました！」\n終\nまどか、さやか、マミ、京子、ほむら「って、なんで俺くんが！？\n改めまして、ありがとうございました！」\n本当の本当に終わり';
     }
   }
 }
