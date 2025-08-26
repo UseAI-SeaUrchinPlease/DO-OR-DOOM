@@ -34,7 +34,7 @@ class _TaskEditState extends State<TaskEdit> {
       _currentTask = TaskStorage.getTask(widget.taskId!);
       if (_currentTask != null) {
         _taskNameController.text = _currentTask!.task;
-        _detailsController.text = _currentTask!.sentence ?? '';
+        _detailsController.text = _currentTask!.description ?? '';
         _selectedDueDate = _currentTask!.due;
       }
     } else {
@@ -180,10 +180,13 @@ class _TaskEditState extends State<TaskEdit> {
         id: _currentTask!.id,
         task: _taskNameController.text,
         due: _selectedDueDate,
-        sentence: _detailsController.text.isNotEmpty
+        description: _detailsController.text.isNotEmpty
             ? _detailsController.text
             : null,
-        image: _currentTask!.image, // 既存の画像データを保持
+        image1: _currentTask!.image1, // 既存の画像データを保持
+        image2: _currentTask!.image2, // 既存の画像データを保持
+        sentence1: _currentTask!.sentence1, // 既存のsentence1データを保持
+        sentence2: _currentTask!.sentence2, // 既存のsentence2データを保持
       );
 
       await TaskStorage.updateTask(updatedTask);

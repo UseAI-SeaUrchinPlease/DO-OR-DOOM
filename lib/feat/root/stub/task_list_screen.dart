@@ -44,8 +44,8 @@ class _TaskListScreenState extends State<TaskListScreen> {
       due: DateTime.now().add(
         Duration(days: Random().nextInt(7) + 1),
       ), // 1-7日後のランダムな日付
-      image: imageData,
-      sentence: 'これはタスク$idのサンプル文章です。',
+      image1: imageData,
+      description: 'これはタスク$idのサンプル説明です。',
     );
 
     await TaskStorage.saveTask(task);
@@ -151,8 +151,8 @@ class _TaskListScreenState extends State<TaskListScreen> {
                         id: id,
                         task: _taskController.text,
                         due: _selectedDueDate,
-                        image: _generateSampleImage(),
-                        sentence: _sentenceController.text.isNotEmpty
+                        image1: _generateSampleImage(),
+                        description: _sentenceController.text.isNotEmpty
                             ? _sentenceController.text
                             : null,
                       );
@@ -339,7 +339,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(task.sentence ?? '説明文なし'),
+                              Text(task.description ?? '説明文なし'),
                               const SizedBox(height: 4),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -405,7 +405,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                '画像データ: ${task.getImageSize()} bytes',
+                                '画像データ: ${task.getTotalImageSize()} bytes',
                                 style: const TextStyle(
                                   fontSize: 12,
                                   color: Colors.grey,
