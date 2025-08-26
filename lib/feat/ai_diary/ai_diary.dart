@@ -60,6 +60,15 @@ class _AiDiaryState extends State<AiDiary> {
       return;
     }
 
+    // Hiveにsentence1とsentence2の両方がある場合はAPIを呼び出さない
+    if (selectedTask!.hasSentence1() && selectedTask!.hasSentence2()) {
+      setState(() {
+        isLoading = false;
+        errorMessage = null;
+      });
+      return;
+    }
+
     setState(() {
       isLoading = true;
       errorMessage = null;
@@ -290,20 +299,7 @@ class _AiDiaryState extends State<AiDiary> {
 
   /// 画像の装飾を取得
   DecorationImage? _getImageDecoration() {
-    // APIデータがある場合は優先的に使用
-    if (aiDiaryData != null) {
-      final content = isDoingSelected
-          ? aiDiaryData!.positive
-          : aiDiaryData!.negative;
-      if (content.imageData != null) {
-        return DecorationImage(
-          image: MemoryImage(content.imageData!),
-          fit: BoxFit.cover,
-        );
-      }
-    }
-
-    // APIデータがない場合はHiveデータから取得
+    // Hiveデータがある場合は優先的に使用
     if (selectedTask != null) {
       if (isDoingSelected) {
         // 「タスクをすると？」選択時 - image2（positive）を使用
@@ -324,6 +320,19 @@ class _AiDiaryState extends State<AiDiary> {
       }
     }
 
+    // Hiveデータがない場合はAPIデータを使用
+    if (aiDiaryData != null) {
+      final content = isDoingSelected
+          ? aiDiaryData!.positive
+          : aiDiaryData!.negative;
+      if (content.imageData != null) {
+        return DecorationImage(
+          image: MemoryImage(content.imageData!),
+          fit: BoxFit.cover,
+        );
+      }
+    }
+
     // 画像がない場合はデフォルト画像
     return DecorationImage(
       image: AssetImage(
@@ -337,15 +346,7 @@ class _AiDiaryState extends State<AiDiary> {
 
   /// 表示するテキストを取得
   String _getDisplayText() {
-    // APIデータがある場合は優先的に使用
-    if (aiDiaryData != null) {
-      final content = isDoingSelected
-          ? aiDiaryData!.positive
-          : aiDiaryData!.negative;
-      return content.text;
-    }
-
-    // APIデータがない場合はHiveデータから取得
+    // Hiveデータがある場合は優先的に使用
     if (selectedTask != null) {
       if (isDoingSelected) {
         // 「タスクをすると？」選択時 - sentence2（positive）を使用
@@ -358,6 +359,14 @@ class _AiDiaryState extends State<AiDiary> {
           return selectedTask!.sentence1!;
         }
       }
+    }
+
+    // Hiveデータがない場合はAPIデータを使用
+    if (aiDiaryData != null) {
+      final content = isDoingSelected
+          ? aiDiaryData!.positive
+          : aiDiaryData!.negative;
+      return content.text;
     }
 
     // データがない場合はデフォルトテキストを表示
