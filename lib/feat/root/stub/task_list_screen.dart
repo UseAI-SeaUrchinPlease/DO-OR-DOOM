@@ -35,17 +35,18 @@ class _TaskListScreenState extends State<TaskListScreen> {
   void _addSampleTask() async {
     final id = TaskStorage.getNextAvailableId();
 
-    // サンプル画像データ（シンプルな色付きピクセル）
-    final imageData = _generateSampleImage();
-
     final task = TaskData(
       id: id,
       task: 'サンプルタスク $id',
       due: DateTime.now().add(
         Duration(days: Random().nextInt(7) + 1),
       ), // 1-7日後のランダムな日付
-      image1: imageData,
       description: 'これはタスク$idのサンプル説明です。',
+      // API取得前はsentence1/2とimage1/2をnullで生成
+      sentence1: null,
+      sentence2: null,
+      image1: null,
+      image2: null,
     );
 
     await TaskStorage.saveTask(task);
@@ -56,23 +57,6 @@ class _TaskListScreenState extends State<TaskListScreen> {
         context,
       ).showSnackBar(SnackBar(content: Text('タスク$idを追加しました')));
     }
-  }
-
-  Uint8List _generateSampleImage() {
-    // 簡単な10x10のカラー画像データを生成
-    final random = Random();
-    final List<int> pixels = [];
-
-    for (int i = 0; i < 100; i++) {
-      pixels.addAll([
-        random.nextInt(256), // R
-        random.nextInt(256), // G
-        random.nextInt(256), // B
-        255, // A
-      ]);
-    }
-
-    return Uint8List.fromList(pixels);
   }
 
   void _showAddTaskDialog() {
@@ -151,10 +135,14 @@ class _TaskListScreenState extends State<TaskListScreen> {
                         id: id,
                         task: _taskController.text,
                         due: _selectedDueDate,
-                        image1: _generateSampleImage(),
                         description: _sentenceController.text.isNotEmpty
                             ? _sentenceController.text
                             : null,
+                        // API取得前はsentence1/2とimage1/2をnullで生成
+                        sentence1: null,
+                        sentence2: null,
+                        image1: null,
+                        image2: null,
                       );
 
                       await TaskStorage.saveTask(task);

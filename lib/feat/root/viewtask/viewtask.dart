@@ -1,3 +1,4 @@
+import 'package:do_or_doom/feat/ai_diary/ai_diary.dart';
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import '../../../core/models/task_data.dart';
@@ -56,16 +57,16 @@ class TaskItem {
       date: taskData.due,
       dueTime: null, // TaskDataには時間情報がないため
       description: taskData.description,
-      color: taskData.isOverdue() 
-          ? Colors.red 
-          : taskData.isDueToday() 
-              ? Colors.orange 
-              : const Color(0xFF6750A4),
-      priority: taskData.isOverdue() 
-          ? TaskPriority.urgent 
-          : taskData.isDueToday() 
-              ? TaskPriority.high 
-              : TaskPriority.medium,
+      color: taskData.isOverdue()
+          ? Colors.red
+          : taskData.isDueToday()
+          ? Colors.orange
+          : const Color(0xFF6750A4),
+      priority: taskData.isOverdue()
+          ? TaskPriority.urgent
+          : taskData.isDueToday()
+          ? TaskPriority.high
+          : TaskPriority.medium,
       isCompleted: false, // 現在のTaskDataには完了状態がないため
     );
   }
@@ -73,7 +74,9 @@ class TaskItem {
   // Appointmentから変換（カレンダー用）
   factory TaskItem.fromAppointment(Appointment appointment) {
     return TaskItem(
-      id: appointment.id?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      id:
+          appointment.id?.toString() ??
+          DateTime.now().millisecondsSinceEpoch.toString(),
       title: appointment.subject,
       date: appointment.startTime,
       dueTime: appointment.endTime,
@@ -83,13 +86,11 @@ class TaskItem {
   }
 }
 
-
-
 enum TaskPriority {
-  low,       // 低
-  medium,    // 中
-  high,      // 高
-  urgent,    // 緊急
+  low, // 低
+  medium, // 中
+  high, // 高
+  urgent, // 緊急
 }
 
 // タスク一覧表示ウィジェット
@@ -121,7 +122,9 @@ class TaskListWidgetState extends State<TaskListWidget> {
   void _loadTasksFromDB() {
     final taskDataList = TaskStorage.getAllTasks();
     setState(() {
-      _tasks = taskDataList.map((taskData) => TaskItem.fromTaskData(taskData)).toList();
+      _tasks = taskDataList
+          .map((taskData) => TaskItem.fromTaskData(taskData))
+          .toList();
       // 日付順にソート（期限が近い順）
       _tasks.sort((a, b) => a.date.compareTo(b.date));
       // 削除処理中フラグをクリア（削除完了後に呼ばれるため）
@@ -143,7 +146,7 @@ class TaskListWidgetState extends State<TaskListWidget> {
   Widget build(BuildContext context) {
     // 全てのタスクを表示
     final displayTasks = _tasks;
-    
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -171,11 +174,7 @@ class TaskListWidgetState extends State<TaskListWidget> {
             ),
             child: Row(
               children: [
-                const Icon(
-                  Icons.list_alt,
-                  color: Color(0xFF6750A4),
-                  size: 24,
-                ),
+                const Icon(Icons.list_alt, color: Color(0xFF6750A4), size: 24),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -190,7 +189,7 @@ class TaskListWidgetState extends State<TaskListWidget> {
               ],
             ),
           ),
-          
+
           // コンテンツ部分（タスクリストまたは空の状態）
           if (displayTasks.isEmpty)
             _buildEmptyContent()
@@ -199,45 +198,51 @@ class TaskListWidgetState extends State<TaskListWidget> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: displayTasks.length,
-              separatorBuilder: (context, index) => const Divider(
-                height: 1,
-                color: Color(0xFFE0E0E0),
-              ),
+              separatorBuilder: (context, index) =>
+                  const Divider(height: 1, color: Color(0xFFE0E0E0)),
               itemBuilder: (context, index) {
                 final task = displayTasks[index];
                 final isDeleting = _deletingTasks.contains(task.id);
-                
+
                 return AnimatedOpacity(
                   opacity: isDeleting ? 0.5 : 1.0,
                   duration: const Duration(milliseconds: 300),
                   child: TaskItemWidget(
                     task: task,
-                    onTap: isDeleting ? null : () => _showTaskDetailDialog(context, task),
-                    onCompletedChanged: isDeleting ? null : (isCompleted) async {
-                      if (isCompleted) {
-                        // 削除処理開始
-                        setState(() {
-                          _deletingTasks.add(task.id);
-                        });
-                        
-                        try {
-                          // DBからタスクを削除
-                          await TaskStorage.deleteTask(int.parse(task.id));
-                          
-                          // 削除完了の通知
-                          widget.onTaskCompletedChanged?.call(task.copyWith(isCompleted: true));
-                          
-                          // タスクリストを再読み込み
-                          _loadTasksFromDB();
-                        } catch (e) {
-                          // エラー時は削除処理中フラグを解除
-                          setState(() {
-                            _deletingTasks.remove(task.id);
-                          });
-                          debugPrint('タスク削除エラー: $e');
-                        }
-                      }
-                    },
+                    onTap: isDeleting
+                        ? null
+                        : () => _showTaskDetailDialog(context, task),
+                    onCompletedChanged: isDeleting
+                        ? null
+                        : (isCompleted) async {
+                            if (isCompleted) {
+                              // 削除処理開始
+                              setState(() {
+                                _deletingTasks.add(task.id);
+                              });
+
+                              try {
+                                // DBからタスクを削除
+                                await TaskStorage.deleteTask(
+                                  int.parse(task.id),
+                                );
+
+                                // 削除完了の通知
+                                widget.onTaskCompletedChanged?.call(
+                                  task.copyWith(isCompleted: true),
+                                );
+
+                                // タスクリストを再読み込み
+                                _loadTasksFromDB();
+                              } catch (e) {
+                                // エラー時は削除処理中フラグを解除
+                                setState(() {
+                                  _deletingTasks.remove(task.id);
+                                });
+                                debugPrint('タスク削除エラー: $e');
+                              }
+                            }
+                          },
                   ),
                 );
               },
@@ -247,8 +252,6 @@ class TaskListWidgetState extends State<TaskListWidget> {
     );
   }
 
-
-
   // 空のコンテンツ部分のみ（ヘッダーなし）
   Widget _buildEmptyContent() {
     return Container(
@@ -256,11 +259,7 @@ class TaskListWidgetState extends State<TaskListWidget> {
       padding: const EdgeInsets.all(32),
       child: Column(
         children: [
-          Icon(
-            Icons.task_alt,
-            size: 64,
-            color: Colors.grey[400],
-          ),
+          Icon(Icons.task_alt, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(
             'タスクがありません',
@@ -273,17 +272,12 @@ class TaskListWidgetState extends State<TaskListWidget> {
           const SizedBox(height: 8),
           Text(
             '新しいタスクを追加してみましょう',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[500],
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
           ),
         ],
       ),
     );
   }
-
-
 
   // タスク詳細ダイアログ
   void _showTaskDetailDialog(BuildContext context, TaskItem task) {
@@ -320,10 +314,18 @@ class TaskListWidgetState extends State<TaskListWidget> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildDetailRow(Icons.calendar_today, '日付', '${task.date.year}/${task.date.month.toString().padLeft(2, '0')}/${task.date.day.toString().padLeft(2, '0')}'),
+              _buildDetailRow(
+                Icons.calendar_today,
+                '日付',
+                '${task.date.year}/${task.date.month.toString().padLeft(2, '0')}/${task.date.day.toString().padLeft(2, '0')}',
+              ),
               if (task.dueTime != null) ...[
                 const SizedBox(height: 12),
-                _buildDetailRow(Icons.access_time, '時間', '${task.dueTime!.hour.toString().padLeft(2, '0')}:${task.dueTime!.minute.toString().padLeft(2, '0')}'),
+                _buildDetailRow(
+                  Icons.access_time,
+                  '時間',
+                  '${task.dueTime!.hour.toString().padLeft(2, '0')}:${task.dueTime!.minute.toString().padLeft(2, '0')}',
+                ),
               ],
 
               if (task.description?.isNotEmpty == true) ...[
@@ -357,16 +359,11 @@ class TaskListWidgetState extends State<TaskListWidget> {
           ),
         ),
         Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(color: Color(0xFF49454F)),
-          ),
+          child: Text(value, style: const TextStyle(color: Color(0xFF49454F))),
         ),
       ],
     );
   }
-
-
 }
 
 // タスクアイテムウィジェット
@@ -393,16 +390,14 @@ class TaskItemWidget extends StatelessWidget {
             // 日付アイコン
             _buildDateIcon(),
             const SizedBox(width: 12),
-            
+
             // タスク情報
-            Expanded(
-              child: _buildTaskInfo(),
-            ),
-            
+            Expanded(child: _buildTaskInfo()),
+
             // シンプルボタン（旧ステータス位置）
             _buildSimpleButton(),
             const SizedBox(width: 8),
-            
+
             // チェックボックス
             _buildCheckbox(),
           ],
@@ -417,9 +412,7 @@ class TaskItemWidget extends StatelessWidget {
       height: 40,
       decoration: ShapeDecoration(
         color: task.color.withOpacity(0.2),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       child: Center(
         child: Text(
@@ -453,18 +446,11 @@ class TaskItemWidget extends StatelessWidget {
           const SizedBox(height: 4),
           Row(
             children: [
-              Icon(
-                Icons.access_time,
-                size: 14,
-                color: Colors.grey[600],
-              ),
+              Icon(Icons.access_time, size: 14, color: Colors.grey[600]),
               const SizedBox(width: 4),
               Text(
                 '${task.dueTime!.hour.toString().padLeft(2, '0')}:${task.dueTime!.minute.toString().padLeft(2, '0')}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
             ],
           ),
@@ -473,10 +459,7 @@ class TaskItemWidget extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             task.description!,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -494,73 +477,8 @@ class TaskItemWidget extends StatelessWidget {
             showDialog(
               context: context,
               builder: (BuildContext context) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: const Row(
-                children: [
-                  Icon(
-                    Icons.settings,
-                    color: Color(0xFF6750A4),
-                    size: 24,
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    'タスク操作',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      color: Color(0xFF49454F),
-                    ),
-                  ),
-                ],
-              ),
-              content: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF4E6),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: const Color(0xFFFF9800).withOpacity(0.3),
-                    width: 1,
-                  ),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline,
-                      color: Color(0xFFFF9800),
-                      size: 20,
-                    ),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'タスク操作機能は現在開発中です。\n近日中に実装予定です。',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF8B5000),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text(
-                    'OK',
-                    style: TextStyle(
-                      color: Color(0xFF6750A4),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
+                return AiDiary(taskId: int.parse(task.id));
+              },
             );
           },
           child: Container(
@@ -574,7 +492,7 @@ class TaskItemWidget extends StatelessWidget {
             ),
             child: const Center(
               child: Text(
-                '操作',
+                'AI日記',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
@@ -598,9 +516,7 @@ class TaskItemWidget extends StatelessWidget {
       },
       activeColor: const Color(0xFF6750A4),
       checkColor: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(4),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
     );
   }
 }
