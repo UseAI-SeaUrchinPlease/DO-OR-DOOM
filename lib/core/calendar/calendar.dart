@@ -41,7 +41,7 @@ class CalendarWidgetState extends State<CalendarWidget> {
           controller: _calendarController,
           view: CalendarView.month,
           dataSource: AppointmentDataSource(_appointments),
-          firstDayOfWeek: 1, // 月曜日から開始
+          firstDayOfWeek: 7, // 日曜日から開始
           monthViewSettings: const MonthViewSettings(
             appointmentDisplayMode: MonthAppointmentDisplayMode.appointment,
             showAgenda: true,
