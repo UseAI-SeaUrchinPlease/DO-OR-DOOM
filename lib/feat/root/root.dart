@@ -47,8 +47,9 @@ class _RootWidgetState extends State<RootWidget> {
               // タスク追加ウィジェット
               AddTaskWidget(
                 onTaskAdded: () {
-                  // タスクが追加されたら、カレンダーを更新
+                  // タスクが追加されたら、カレンダーとタスクリストを更新
                   _calendarKey.currentState?.refreshTasks();
+                  _taskListKey.currentState?.refreshTasks();
                 },
               ),
               
