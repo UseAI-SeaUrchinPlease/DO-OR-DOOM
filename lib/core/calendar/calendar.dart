@@ -141,7 +141,7 @@ class CalendarWidgetState extends State<CalendarWidget> {
       endTime: endDateTime,
       subject: task.task,
       color: _getTaskColor(task),
-      notes: task.sentence ?? '',
+      notes: task.description ?? '',
     );
   }
 

@@ -198,7 +198,7 @@ class _AddTaskWidgetState extends State<AddTaskWidget> {
         id: newId,
         task: _titleController.text.trim(),
         due: _selectedDate,
-        sentence: _descriptionController.text.trim().isEmpty 
+        description: _descriptionController.text.trim().isEmpty 
             ? null 
             : _descriptionController.text.trim(),
       );

@@ -55,7 +55,7 @@ class TaskItem {
       title: taskData.task,
       date: taskData.due,
       dueTime: null, // TaskDataには時間情報がないため
-      description: taskData.sentence,
+      description: taskData.description,
       color: taskData.isOverdue() 
           ? Colors.red 
           : taskData.isDueToday() 
