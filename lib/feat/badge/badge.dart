@@ -172,29 +172,42 @@ class _TaskBadgeState extends State<TaskBadge> {
 
     return Column(
       children: [
-        // バッジ画像
+        // バッジ画像（円形）
         Expanded(
           flex: 2,
-          child: Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              image: badgeData!.imageData != null
-                  ? DecorationImage(
-                      image: MemoryImage(badgeData!.imageData!),
-                      fit: BoxFit.contain,
-                    )
-                  : null,
-            ),
-            child: badgeData!.imageData == null
-                ? const Center(
-                    child: Icon(
-                      Icons.image_not_supported,
-                      size: 64,
-                      color: Colors.grey,
+          child: Center(
+            child: AspectRatio(
+              aspectRatio: 1.0, // 正方形の比率
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 12,
+                      offset: Offset(0, 6),
                     ),
-                  )
-                : null,
+                  ],
+                  shape: BoxShape.circle,
+                  color: Colors.transparent, // 透明にして縁を隠す
+                ),
+                child: ClipOval(
+                  child: badgeData!.imageData != null
+                      ? Image.memory(
+                          badgeData!.imageData!,
+                          fit: BoxFit.cover, // 円形に合わせてクロップ
+                        )
+                      : Container(
+                          color: Colors.grey[200],
+                          child: const Icon(
+                            Icons.image_not_supported,
+                            size: 64,
+                            color: Colors.grey,
+                          ),
+                        ),
+                ),
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 16),
