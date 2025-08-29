@@ -1,5 +1,6 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/task_data.dart';
+import 'badge_service.dart';
 
 class TaskStorage {
   static const String _boxName = 'task_box';
@@ -280,8 +281,21 @@ class TaskStorage {
   static Future<void> markTaskAsCompleted(int id) async {
     final task = getTask(id);
     if (task != null) {
+      final wasCompleted = task.isCompleted;
       task.markAsCompleted();
       await updateTask(task);
+
+      // 初めて完了した場合はバッジ作成をリクエストする（既にバッジがある場合はスキップ）
+      if (!wasCompleted && !task.hasBadgeData()) {
+        // 非同期で実行（UIをブロックしない）。失敗してもログを残す
+        Future(() async {
+          try {
+            await BadgeService.fetchBadge([task]);
+          } catch (e) {
+            print('Badge generation request failed for task ${task.id}: $e');
+          }
+        });
+      }
     }
   }
 

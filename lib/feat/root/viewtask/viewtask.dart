@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:do_or_doom/feat/ai_diary/ai_diary.dart';
+import 'package:do_or_doom/feat/badge/badge.dart';
+import 'package:do_or_doom/feat/badge/badge_gallery.dart';
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import '../../../core/models/task_data.dart';
@@ -288,6 +290,31 @@ class TaskListWidgetState extends State<TaskListWidget> {
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
+                // バッジギャラリーボタン
+                IconButton(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => Dialog(
+                        child: SizedBox(
+                          width: 600,
+                          height: 520,
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Column(
+                              children: const [
+                                Expanded(child: BadgeGallery()),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.emoji_events, color: Color(0xFF6750A4)),
+                  tooltip: 'バッジギャラリー',
+                ),
               ],
             ),
           ),
@@ -531,6 +558,139 @@ class TaskListWidgetState extends State<TaskListWidget> {
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('閉じる'),
+            ),
+            if (taskData != null) ...[
+              TextButton(
+                onPressed: () => _showDeleteConfirmationDialog(context, taskData!),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red,
+                ),
+                child: const Text('削除'),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  // タスク削除確認ダイアログ
+  void _showDeleteConfirmationDialog(BuildContext context, TaskData taskData) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.warning, color: Colors.red, size: 24),
+              SizedBox(width: 8),
+              Text('タスクを削除'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '以下のタスクを完全に削除しますか？',
+                style: TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      taskData.task,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '期限: ${taskData.getDueDateString()}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    Text(
+                      'カテゴリ: ${taskData.getCategoryDisplayName()}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                '※この操作は取り消せません',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('キャンセル'),
+            ),
+            TextButton(
+              onPressed: () async {
+                try {
+                  // タスクをDBから削除
+                  await TaskStorage.deleteTask(taskData.id);
+                  
+                  // ダイアログを閉じる
+                  if (context.mounted) {
+                    Navigator.of(context).pop(); // 削除確認ダイアログを閉じる
+                    Navigator.of(context).pop(); // タスク詳細ダイアログを閉じる
+                  }
+                  
+                  // タスクリストを再読み込み
+                  _loadTasksFromDB();
+                  
+                  // 削除完了メッセージを表示
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('「${taskData.task}」を削除しました'),
+                        backgroundColor: Colors.green,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  // エラーハンドリング
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('削除に失敗しました: $e'),
+                        backgroundColor: Colors.red,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                }
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('削除'),
             ),
           ],
         );
@@ -798,17 +958,30 @@ class TaskItemWidget extends StatelessWidget {
   }
 
   Widget _buildSimpleButton() {
+    // タスクが完了済みかどうかを判定（完了待機中は未完了として扱う）
+    final isActuallyCompleted = task.isCompleted && !isPendingCompletion;
+    
     return Builder(
       builder: (BuildContext context) {
         return GestureDetector(
           onTap: () {
-            // スタブダイアログを表示
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                return AiDiary(taskId: int.parse(task.id));
-              },
-            );
+            if (isActuallyCompleted) {
+              // 完了済みタスクの場合：バッジ機能
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return TaskBadge(taskId: int.parse(task.id));
+                },
+              );
+            } else {
+              // 未完了タスクの場合：AI日記機能
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AiDiary(taskId: int.parse(task.id));
+                },
+              );
+            }
           },
           child: Container(
             width: 64,
@@ -819,10 +992,10 @@ class TaskItemWidget extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
               ),
             ),
-            child: const Center(
+            child: Center(
               child: Text(
-                'AI日記',
-                style: TextStyle(
+                isActuallyCompleted ? 'バッジ' : 'AI日記',
+                style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                   color: Color(0xFF6750A4),

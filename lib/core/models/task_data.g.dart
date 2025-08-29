@@ -27,13 +27,16 @@ class TaskDataAdapter extends TypeAdapter<TaskData> {
       sentence2: fields[7] as String?,
       category: fields[8] as TaskCategory,
       isCompleted: fields[9] as bool,
+      badgeTitle: fields[10] as String?,
+      badgeText: fields[11] as String?,
+      badgeImage: fields[12] as Uint8List?,
     );
   }
 
   @override
   void write(BinaryWriter writer, TaskData obj) {
     writer
-      ..writeByte(10)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -53,7 +56,13 @@ class TaskDataAdapter extends TypeAdapter<TaskData> {
       ..writeByte(8)
       ..write(obj.category)
       ..writeByte(9)
-      ..write(obj.isCompleted);
+      ..write(obj.isCompleted)
+      ..writeByte(10)
+      ..write(obj.badgeTitle)
+      ..writeByte(11)
+      ..write(obj.badgeText)
+      ..writeByte(12)
+      ..write(obj.badgeImage);
   }
 
   @override
