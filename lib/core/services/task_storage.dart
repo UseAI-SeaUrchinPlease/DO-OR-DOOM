@@ -13,6 +13,11 @@ class TaskStorage {
     if (!Hive.isAdapterRegistered(0)) {
       Hive.registerAdapter(TaskDataAdapter());
     }
+    
+    // TaskCategoryアダプターを登録
+    if (!Hive.isAdapterRegistered(1)) {
+      Hive.registerAdapter(TaskCategoryAdapter());
+    }
 
     try {
       // ボックスを開く
@@ -205,6 +210,60 @@ class TaskStorage {
       return task.due.isAfter(start.subtract(const Duration(days: 1))) &&
           task.due.isBefore(end.add(const Duration(days: 1)));
     }).toList();
+  }
+
+  /// 指定したカテゴリーのタスクを取得
+  static List<TaskData> getTasksByCategory(TaskCategory category) {
+    return _taskBox.values.where((task) => task.category == category).toList();
+  }
+
+  /// 複数のカテゴリーのタスクを取得
+  static List<TaskData> getTasksByCategories(List<TaskCategory> categories) {
+    return _taskBox.values.where((task) => categories.contains(task.category)).toList();
+  }
+
+  /// カテゴリー別のタスク数を取得
+  static Map<TaskCategory, int> getTaskCountByCategory() {
+    final Map<TaskCategory, int> categoryCounts = {};
+    
+    // すべてのカテゴリーを0で初期化
+    for (final category in TaskCategory.values) {
+      categoryCounts[category] = 0;
+    }
+    
+    // 実際のタスク数をカウント
+    for (final task in _taskBox.values) {
+      categoryCounts[task.category] = (categoryCounts[task.category] ?? 0) + 1;
+    }
+    
+    return categoryCounts;
+  }
+
+  /// 指定したカテゴリーのタスクを期限順でソート取得
+  static List<TaskData> getTasksByCategorySortedByDue(TaskCategory category) {
+    final tasks = getTasksByCategory(category);
+    tasks.sort((a, b) => a.due.compareTo(b.due));
+    return tasks;
+  }
+
+  /// カテゴリーを含めたテキスト検索
+  static List<TaskData> searchTasksWithCategory(String query, {TaskCategory? filterCategory}) {
+    final results = _taskBox.values.where((task) {
+      // カテゴリーフィルターがある場合は最初にチェック
+      if (filterCategory != null && task.category != filterCategory) {
+        return false;
+      }
+      
+      // テキスト検索
+      final lowerQuery = query.toLowerCase();
+      return task.task.toLowerCase().contains(lowerQuery) ||
+          (task.description?.toLowerCase().contains(lowerQuery) ?? false) ||
+          (task.sentence1?.toLowerCase().contains(lowerQuery) ?? false) ||
+          (task.sentence2?.toLowerCase().contains(lowerQuery) ?? false) ||
+          task.category.displayName.toLowerCase().contains(lowerQuery);
+    }).toList();
+    
+    return results;
   }
 
   /// ストレージを閉じる

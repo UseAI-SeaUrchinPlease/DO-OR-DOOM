@@ -9,6 +9,7 @@ class TaskStorageV2 {
         boxName: 'task_box_v2',
         typeId: 0,
         adapter: TaskDataAdapter(),
+        additionalAdapters: [TaskCategoryAdapter()],
       );
 
   /// 初期化
@@ -226,6 +227,58 @@ class TaskStorageV2 {
     await _storage.close();
   }
 
+  /// 指定したカテゴリーのタスクを取得
+  static List<TaskData> getTasksByCategory(TaskCategory category) {
+    return _storage.search((task) => task.category == category);
+  }
+
+  /// 複数のカテゴリーのタスクを取得
+  static List<TaskData> getTasksByCategories(List<TaskCategory> categories) {
+    return _storage.search((task) => categories.contains(task.category));
+  }
+
+  /// カテゴリー別のタスク数を取得
+  static Map<TaskCategory, int> getTaskCountByCategory() {
+    final Map<TaskCategory, int> categoryCounts = {};
+    
+    // すべてのカテゴリーを0で初期化
+    for (final category in TaskCategory.values) {
+      categoryCounts[category] = 0;
+    }
+    
+    // 実際のタスク数をカウント
+    for (final task in _storage.getAll()) {
+      categoryCounts[task.category] = (categoryCounts[task.category] ?? 0) + 1;
+    }
+    
+    return categoryCounts;
+  }
+
+  /// 指定したカテゴリーのタスクを期限順でソート取得
+  static List<TaskData> getTasksByCategorySortedByDue(TaskCategory category) {
+    final tasks = getTasksByCategory(category);
+    tasks.sort((a, b) => a.due.compareTo(b.due));
+    return tasks;
+  }
+
+  /// カテゴリーを含めたテキスト検索
+  static List<TaskData> searchTasksWithCategory(String query, {TaskCategory? filterCategory}) {
+    final lowerQuery = query.toLowerCase();
+    return _storage.search((task) {
+      // カテゴリーフィルターがある場合は最初にチェック
+      if (filterCategory != null && task.category != filterCategory) {
+        return false;
+      }
+      
+      // テキスト検索
+      return task.task.toLowerCase().contains(lowerQuery) ||
+          (task.description?.toLowerCase().contains(lowerQuery) ?? false) ||
+          (task.sentence1?.toLowerCase().contains(lowerQuery) ?? false) ||
+          (task.sentence2?.toLowerCase().contains(lowerQuery) ?? false) ||
+          task.category.displayName.toLowerCase().contains(lowerQuery);
+    });
+  }
+
   /// デバッグ用：ストレージの内部状態を取得
   static Map<String, dynamic> getDebugInfo() {
     return {
@@ -234,6 +287,7 @@ class TaskStorageV2 {
       'isEmpty': _storage.isEmpty,
       'count': _storage.count,
       'keys': _storage.keys.toList(),
+      'categoryCount': getTaskCountByCategory(),
     };
   }
 }
