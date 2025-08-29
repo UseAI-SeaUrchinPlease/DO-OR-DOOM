@@ -188,179 +188,175 @@ class _AiDiaryState extends State<AiDiary> {
       content: SizedBox(
         width: double.maxFinite,
         height: MediaQuery.of(context).size.height * 0.7,
-        child: _buildDiaryContent(context),
+        child: Column(
+          children: [
+            // タブ部分
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          isDoingSelected = false;
+                        });
+                      },
+                      child: Container(
+                        decoration: ShapeDecoration(
+                          color: !isDoingSelected
+                              ? const Color(0xFFE8DEF8)
+                              : Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            side: BorderSide(
+                              width: 1,
+                              color: const Color(0xFF79747E),
+                            ),
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(100),
+                              bottomLeft: Radius.circular(100),
+                            ),
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'タスクをしないと？',
+                            style: TextStyle(
+                              color: !isDoingSelected
+                                  ? const Color(0xFF4A4459)
+                                  : const Color(0xFF79747E),
+                              fontSize: 12,
+                              fontFamily: 'Roboto',
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          isDoingSelected = true;
+                        });
+                      },
+                      child: Container(
+                        decoration: ShapeDecoration(
+                          color: isDoingSelected
+                              ? const Color(0xFFE8DEF8)
+                              : Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            side: BorderSide(
+                              width: 1,
+                              color: const Color(0xFF79747E),
+                            ),
+                            borderRadius: BorderRadius.only(
+                              topRight: Radius.circular(100),
+                              bottomRight: Radius.circular(100),
+                            ),
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'タスクをすると？',
+                            style: TextStyle(
+                              color: isDoingSelected
+                                  ? const Color(0xFF4A4459)
+                                  : const Color(0xFF79747E),
+                              fontSize: 12,
+                              fontFamily: 'Roboto',
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // 画像部分
+            SizedBox(
+              width: double.infinity,
+              height: 220,
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : Container(
+                      decoration: BoxDecoration(
+                        image: _getImageDecoration(),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // テキスト部分
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF9F9F9), // 薄いグレー背景
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.all(16), // padding を設ける
+                child: isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : errorMessage != null
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.error, color: Colors.red),
+                            const SizedBox(height: 8),
+                            Text(
+                              'エラーが発生しました',
+                              style: TextStyle(
+                                color: Colors.red,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              errorMessage!,
+                              style: TextStyle(color: Colors.red, fontSize: 12),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: _fetchAiDiaryData,
+                              child: const Text('再試行'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : SingleChildScrollView(
+                        child: Text(
+                          _getDisplayText(),
+                          style: TextStyle(
+                            color: const Color(0xFF1D1B20),
+                            fontSize: 14,
+                            fontFamily: 'Roboto',
+                            fontWeight: FontWeight.w400,
+                            height: 1.57,
+                            letterSpacing: 0.56,
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+          ],
+        ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('閉じる'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDiaryContent(BuildContext context) {
-    return Column(
-      children: [
-        // タブ部分
-        SizedBox(
-          width: double.infinity,
-          height: 44,
-          child: Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      isDoingSelected = false;
-                    });
-                  },
-                  child: Container(
-                    decoration: ShapeDecoration(
-                      color: !isDoingSelected
-                          ? const Color(0xFFE8DEF8)
-                          : Colors.transparent,
-                      shape: RoundedRectangleBorder(
-                        side: BorderSide(
-                          width: 1,
-                          color: const Color(0xFF79747E),
-                        ),
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(100),
-                          bottomLeft: Radius.circular(100),
-                        ),
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        'タスクをしないと？',
-                        style: TextStyle(
-                          color: !isDoingSelected
-                              ? const Color(0xFF4A4459)
-                              : const Color(0xFF79747E),
-                          fontSize: 12,
-                          fontFamily: 'Roboto',
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      isDoingSelected = true;
-                    });
-                  },
-                  child: Container(
-                    decoration: ShapeDecoration(
-                      color: isDoingSelected
-                          ? const Color(0xFFE8DEF8)
-                          : Colors.transparent,
-                      shape: RoundedRectangleBorder(
-                        side: BorderSide(
-                          width: 1,
-                          color: const Color(0xFF79747E),
-                        ),
-                        borderRadius: BorderRadius.only(
-                          topRight: Radius.circular(100),
-                          bottomRight: Radius.circular(100),
-                        ),
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        'タスクをすると？',
-                        style: TextStyle(
-                          color: isDoingSelected
-                              ? const Color(0xFF4A4459)
-                              : const Color(0xFF79747E),
-                          fontSize: 12,
-                          fontFamily: 'Roboto',
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // 画像部分
-        SizedBox(
-          width: double.infinity,
-          height: 220,
-          child: isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : Container(
-                  decoration: BoxDecoration(
-                    image: _getImageDecoration(),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-        ),
-
-        const SizedBox(height: 16),
-
-        // テキスト部分
-        Expanded(
-          child: Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF9F9F9), // 薄いグレー背景
-              borderRadius: BorderRadius.circular(8),
-            ),
-            padding: const EdgeInsets.all(16), // padding を設ける
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : errorMessage != null
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.error, color: Colors.red),
-                        const SizedBox(height: 8),
-                        Text(
-                          'エラーが発生しました',
-                          style: TextStyle(
-                            color: Colors.red,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          errorMessage!,
-                          style: TextStyle(color: Colors.red, fontSize: 12),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: _fetchAiDiaryData,
-                          child: const Text('再試行'),
-                        ),
-                      ],
-                    ),
-                  )
-                : SingleChildScrollView(
-                    child: Text(
-                      _getDisplayText(),
-                      style: TextStyle(
-                        color: const Color(0xFF1D1B20),
-                        fontSize: 14,
-                        fontFamily: 'Roboto',
-                        fontWeight: FontWeight.w400,
-                        height: 1.57,
-                        letterSpacing: 0.56,
-                      ),
-                    ),
-                  ),
-          ),
         ),
       ],
     );
