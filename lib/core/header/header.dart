@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/task_storage.dart';
 import '../models/task_data.dart';
+import '../../feat/ai_diary/ai_diary.dart';
 
 class HeaderWidget extends StatelessWidget implements PreferredSizeWidget {
   const HeaderWidget({super.key});
@@ -87,6 +88,31 @@ class HeaderWidget extends StatelessWidget implements PreferredSizeWidget {
                 : _buildTaskList(todayTasks),
           ),
           actions: [
+            if (todayTasks.isNotEmpty) // タスクがある場合のみ表示
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pop(); // モーダルを閉じる
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AiDiary(tasks: todayTasks),
+                    ),
+                  );
+                },
+                icon: Icon(
+                  Icons.auto_fix_high,
+                  color: Color(0xFF6750A4),
+                  size: 18,
+                ),
+                label: Text(
+                  'AI絵日記',
+                  style: TextStyle(
+                    color: Color(0xFF6750A4),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: const Text(
