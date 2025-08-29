@@ -125,6 +125,15 @@ class TaskData extends HiveObject {
   @HiveField(9)
   bool isCompleted;
 
+  @HiveField(10)
+  String? badgeTitle;
+
+  @HiveField(11)
+  String? badgeText;
+
+  @HiveField(12)
+  Uint8List? badgeImage;
+
   TaskData({
     required this.id,
     required this.task,
@@ -136,6 +145,9 @@ class TaskData extends HiveObject {
     this.sentence2,
     this.category = TaskCategory.task, // デフォルトはタスク
     this.isCompleted = false, // デフォルトは未完了
+    this.badgeTitle,
+    this.badgeText,
+    this.badgeImage,
   });
 
   /// image1データが存在するかチェック
@@ -201,6 +213,31 @@ class TaskData extends HiveObject {
   /// sentence2の長さを取得（存在しない場合は0）
   int getSentence2Length() {
     return sentence2?.length ?? 0;
+  }
+
+  /// バッジタイトルが存在するかチェック
+  bool hasBadgeTitle() {
+    return badgeTitle != null && badgeTitle!.isNotEmpty;
+  }
+
+  /// バッジテキストが存在するかチェック
+  bool hasBadgeText() {
+    return badgeText != null && badgeText!.isNotEmpty;
+  }
+
+  /// バッジ画像が存在するかチェック
+  bool hasBadgeImage() {
+    return badgeImage != null;
+  }
+
+  /// バッジデータが完全に存在するかチェック
+  bool hasBadgeData() {
+    return hasBadgeTitle() && hasBadgeText() && hasBadgeImage();
+  }
+
+  /// バッジ画像のサイズを取得（存在しない場合は0）
+  int getBadgeImageSize() {
+    return badgeImage?.length ?? 0;
   }
 
   /// description以外の4つのフィールド（image1、image2、sentence1、sentence2）のいずれかがnullの場合trueを返す
@@ -315,6 +352,6 @@ class TaskData extends HiveObject {
 
   @override
   String toString() {
-    return 'TaskData{id: $id, task: $task, due: $due, category: ${category.displayName}, isCompleted: $isCompleted, image1: ${getImage1Size()} bytes, image2: ${getImage2Size()} bytes, description: ${description ?? "null"}, sentence1: ${sentence1 ?? "null"}, sentence2: ${sentence2 ?? "null"}}';
+    return 'TaskData{id: $id, task: $task, due: $due, category: ${category.displayName}, isCompleted: $isCompleted, image1: ${getImage1Size()} bytes, image2: ${getImage2Size()} bytes, description: ${description ?? "null"}, sentence1: ${sentence1 ?? "null"}, sentence2: ${sentence2 ?? "null"}, badgeTitle: ${badgeTitle ?? "null"}, badgeText: ${badgeText ?? "null"}, badgeImage: ${getBadgeImageSize()} bytes}';
   }
 }

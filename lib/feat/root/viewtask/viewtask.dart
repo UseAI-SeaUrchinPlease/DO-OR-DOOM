@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:do_or_doom/feat/ai_diary/ai_diary.dart';
+import 'package:do_or_doom/feat/badge/badge.dart';
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import '../../../core/models/task_data.dart';
@@ -806,20 +807,11 @@ class TaskItemWidget extends StatelessWidget {
         return GestureDetector(
           onTap: () {
             if (isActuallyCompleted) {
-              // 完了済みタスクの場合：バッジ機能のプレースホルダー
+              // 完了済みタスクの場合：バッジ機能
               showDialog(
                 context: context,
                 builder: (BuildContext context) {
-                  return AlertDialog(
-                    title: const Text('バッジ機能'),
-                    content: const Text('バッジ機能は準備中です。'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('閉じる'),
-                      ),
-                    ],
-                  );
+                  return TaskBadge(taskId: int.parse(task.id));
                 },
               );
             } else {
