@@ -151,7 +151,7 @@ class _AiDiaryState extends State<AiDiary> {
         isLoading = false;
       });
     } catch (e) {
-      setState(() {
+      setState(() { //ここでエラー起きがち、こわい
         errorMessage = e.toString();
         isLoading = false;
       });

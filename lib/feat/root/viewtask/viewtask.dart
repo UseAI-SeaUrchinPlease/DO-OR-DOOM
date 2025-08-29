@@ -798,17 +798,39 @@ class TaskItemWidget extends StatelessWidget {
   }
 
   Widget _buildSimpleButton() {
+    // タスクが完了済みかどうかを判定（完了待機中は未完了として扱う）
+    final isActuallyCompleted = task.isCompleted && !isPendingCompletion;
+    
     return Builder(
       builder: (BuildContext context) {
         return GestureDetector(
           onTap: () {
-            // スタブダイアログを表示
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                return AiDiary(taskId: int.parse(task.id));
-              },
-            );
+            if (isActuallyCompleted) {
+              // 完了済みタスクの場合：バッジ機能のプレースホルダー
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: const Text('バッジ機能'),
+                    content: const Text('バッジ機能は準備中です。'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('閉じる'),
+                      ),
+                    ],
+                  );
+                },
+              );
+            } else {
+              // 未完了タスクの場合：AI日記機能
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AiDiary(taskId: int.parse(task.id));
+                },
+              );
+            }
           },
           child: Container(
             width: 64,
@@ -819,10 +841,10 @@ class TaskItemWidget extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
               ),
             ),
-            child: const Center(
+            child: Center(
               child: Text(
-                'AI日記',
-                style: TextStyle(
+                isActuallyCompleted ? 'バッジ' : 'AI日記',
+                style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                   color: Color(0xFF6750A4),
