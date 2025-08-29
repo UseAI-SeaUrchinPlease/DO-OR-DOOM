@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:do_or_doom/feat/ai_diary/ai_diary.dart';
 import 'package:do_or_doom/feat/badge/badge.dart';
+import 'package:do_or_doom/feat/badge/badge_gallery.dart';
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import '../../../core/models/task_data.dart';
@@ -288,6 +289,31 @@ class TaskListWidgetState extends State<TaskListWidget> {
                       }),
                     ],
                   ),
+                ),
+                const SizedBox(width: 8),
+                // バッジギャラリーボタン
+                IconButton(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => Dialog(
+                        child: SizedBox(
+                          width: 600,
+                          height: 520,
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Column(
+                              children: const [
+                                Expanded(child: BadgeGallery()),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.emoji_events, color: Color(0xFF6750A4)),
+                  tooltip: 'バッジギャラリー',
                 ),
               ],
             ),
