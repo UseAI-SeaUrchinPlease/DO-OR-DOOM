@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 import '../../core/services/task_storage.dart';
 import '../../core/services/badge_service.dart';
 import '../../core/models/task_data.dart';
@@ -16,18 +17,30 @@ class TaskBadge extends StatefulWidget {
   State<TaskBadge> createState() => _TaskBadgeState();
 }
 
-class _TaskBadgeState extends State<TaskBadge> {
+class _TaskBadgeState extends State<TaskBadge> with SingleTickerProviderStateMixin {
   TaskData? task;
   BadgeResponse? badgeData;
   bool isLoading = false;
   String? errorMessage;
   bool _disposed = false; // dispose状態を追跡
+  late final AnimationController _controller;
+  late final Animation<double> _animation;
+  // auto-rotate, so no front/back state field needed
 
   @override
   void initState() {
     super.initState();
     _loadTask();
     _fetchBadgeData();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 10),
+    );
+    _animation = Tween<double>(begin: 0.0, end: 2 * math.pi).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.linear),
+    );
+    // 自動でゆっくり回転させる
+    _controller.repeat();
   }
 
   void _loadTask() {
@@ -85,8 +98,11 @@ class _TaskBadgeState extends State<TaskBadge> {
   @override
   void dispose() {
     _disposed = true;
+    _controller.dispose();
     super.dispose();
   }
+
+  // auto-rotation used; no manual toggle required
 
   @override
   Widget build(BuildContext context) {
@@ -191,20 +207,30 @@ class _TaskBadgeState extends State<TaskBadge> {
                   shape: BoxShape.circle,
                   color: Colors.transparent, // 透明にして縁を隠す
                 ),
-                child: ClipOval(
-                  child: badgeData!.imageData != null
-                      ? Image.memory(
-                          badgeData!.imageData!,
-                          fit: BoxFit.cover, // 円形に合わせてクロップ
-                        )
-                      : Container(
-                          color: Colors.grey[200],
-                          child: const Icon(
-                            Icons.image_not_supported,
-                            size: 64,
-                            color: Colors.grey,
-                          ),
-                        ),
+                child: AnimatedBuilder(
+                  animation: _controller,
+                  builder: (context, child) {
+                    // animation.value: 0 -> 2π
+                    final angle = _animation.value;
+                    // 正規化して 0..2π の範囲にする
+                    final normalized = angle % (2 * math.pi);
+                    // 裏面を表示するのは 90°(π/2) 〜 270°(3π/2)
+                    final isUnder = normalized > (math.pi / 2) && normalized < (3 * math.pi / 2);
+
+                    return Transform(
+                      alignment: Alignment.center,
+                      transform: Matrix4.identity()
+                        ..setEntry(3, 2, 0.001)
+                        ..rotateY(angle),
+                      child: isUnder
+                          ? Transform(
+                              alignment: Alignment.center,
+                              transform: Matrix4.identity()..rotateY(math.pi),
+                              child: _buildBadgeImageOrPlaceholder(),
+                            )
+                          : _buildBadgeImageOrPlaceholder(),
+                    );
+                  },
                 ),
               ),
             ),
@@ -236,6 +262,28 @@ class _TaskBadgeState extends State<TaskBadge> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildBadgeImageOrPlaceholder() {
+    if (badgeData!.imageData != null) {
+      return ClipOval(
+        child: Image.memory(
+          badgeData!.imageData!,
+          fit: BoxFit.cover,
+        ),
+      );
+    }
+
+    return ClipOval(
+      child: Container(
+        color: Colors.grey[200],
+        child: const Icon(
+          Icons.image_not_supported,
+          size: 64,
+          color: Colors.grey,
+        ),
+      ),
     );
   }
 }
