@@ -122,6 +122,9 @@ class TaskData extends HiveObject {
   @HiveField(8)
   TaskCategory category;
 
+  @HiveField(9)
+  bool isCompleted;
+
   TaskData({
     required this.id,
     required this.task,
@@ -132,6 +135,7 @@ class TaskData extends HiveObject {
     this.sentence1,
     this.sentence2,
     this.category = TaskCategory.task, // デフォルトはタスク
+    this.isCompleted = false, // デフォルトは未完了
   });
 
   /// image1データが存在するかチェック
@@ -282,8 +286,35 @@ class TaskData extends HiveObject {
     return category == targetCategory;
   }
 
+  /// タスクが完了しているかチェック
+  bool isTaskCompleted() {
+    return isCompleted;
+  }
+
+  /// タスクを完了にする
+  void markAsCompleted() {
+    isCompleted = true;
+  }
+
+  /// タスクを未完了にする
+  void markAsIncomplete() {
+    isCompleted = false;
+  }
+
+  /// 完了状態を切り替え
+  void toggleCompleted() {
+    isCompleted = !isCompleted;
+  }
+
+  /// 完了日時を取得（完了している場合）
+  /// 注意: 現在の実装では完了日時は保存していないため、nullを返す
+  DateTime? getCompletedDate() {
+    // 将来的に完了日時フィールドを追加する場合に備えた メソッド
+    return null;
+  }
+
   @override
   String toString() {
-    return 'TaskData{id: $id, task: $task, due: $due, category: ${category.displayName}, image1: ${getImage1Size()} bytes, image2: ${getImage2Size()} bytes, description: ${description ?? "null"}, sentence1: ${sentence1 ?? "null"}, sentence2: ${sentence2 ?? "null"}}';
+    return 'TaskData{id: $id, task: $task, due: $due, category: ${category.displayName}, isCompleted: $isCompleted, image1: ${getImage1Size()} bytes, image2: ${getImage2Size()} bytes, description: ${description ?? "null"}, sentence1: ${sentence1 ?? "null"}, sentence2: ${sentence2 ?? "null"}}';
   }
 }

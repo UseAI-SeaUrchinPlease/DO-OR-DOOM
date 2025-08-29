@@ -182,22 +182,29 @@ class TaskStorageV2 {
     final withDescription = allTasks
         .where((task) => task.hasDescription())
         .length;
+    final completedTasks = allTasks.where((task) => task.isCompleted).length;
     final totalImageSize = allTasks
         .where((task) => task.hasAnyImage())
         .fold<int>(0, (sum, task) => sum + task.getTotalImageSize());
 
     return {
       'totalTasks': allTasks.length,
+      'completedTasks': completedTasks,
+      'incompleteTasks': allTasks.length - completedTasks,
+      'completionRate': allTasks.isEmpty ? 0.0 : (completedTasks / allTasks.length * 100),
       'tasksWithImages': withImages,
       'tasksWithoutImages': allTasks.length - withImages,
       'tasksWithDescription': withDescription,
       'tasksWithoutDescription': allTasks.length - withDescription,
-      'completeTasks': allTasks.where((task) => task.isComplete()).length,
+      'completeDataTasks': allTasks.where((task) => task.isComplete()).length,
       'incompleteDataTasks': allTasks
           .where((task) => task.hasIncompleteData())
           .length,
       'basicTasks': allTasks.where((task) => !task.hasAdditionalData()).length,
       'totalImageSizeBytes': totalImageSize,
+      'categoryCount': getTaskCountByCategory(),
+      'completedByCategory': getCompletedTaskCountByCategory(),
+      'incompleteByCategory': getIncompleteTaskCountByCategory(),
       'averageDescriptionLength': allTasks.isEmpty
           ? 0.0
           : allTasks.fold<int>(
@@ -277,6 +284,97 @@ class TaskStorageV2 {
           (task.sentence2?.toLowerCase().contains(lowerQuery) ?? false) ||
           task.category.displayName.toLowerCase().contains(lowerQuery);
     });
+  }
+
+  /// 完了済みタスクを取得
+  static List<TaskData> getCompletedTasks() {
+    return _storage.search((task) => task.isCompleted);
+  }
+
+  /// 未完了タスクを取得
+  static List<TaskData> getIncompleteTasks() {
+    return _storage.search((task) => !task.isCompleted);
+  }
+
+  /// タスクの完了状態を更新
+  static Future<void> markTaskAsCompleted(int id) async {
+    final task = getTask(id);
+    if (task != null) {
+      task.markAsCompleted();
+      await updateTask(task);
+    }
+  }
+
+  /// タスクを未完了に戻す
+  static Future<void> markTaskAsIncomplete(int id) async {
+    final task = getTask(id);
+    if (task != null) {
+      task.markAsIncomplete();
+      await updateTask(task);
+    }
+  }
+
+  /// タスクの完了状態を切り替え
+  static Future<void> toggleTaskCompleted(int id) async {
+    final task = getTask(id);
+    if (task != null) {
+      task.toggleCompleted();
+      await updateTask(task);
+    }
+  }
+
+  /// 完了タスク数を取得
+  static int getCompletedTaskCount() {
+    return _storage.countWhere((task) => task.isCompleted);
+  }
+
+  /// 未完了タスク数を取得
+  static int getIncompleteTaskCount() {
+    return _storage.countWhere((task) => !task.isCompleted);
+  }
+
+  /// カテゴリー別の完了タスク数を取得
+  static Map<TaskCategory, int> getCompletedTaskCountByCategory() {
+    final Map<TaskCategory, int> categoryCounts = {};
+    
+    // すべてのカテゴリーを0で初期化
+    for (final category in TaskCategory.values) {
+      categoryCounts[category] = 0;
+    }
+    
+    // 完了済みタスクのカテゴリ別カウント
+    for (final task in _storage.search((task) => task.isCompleted)) {
+      categoryCounts[task.category] = (categoryCounts[task.category] ?? 0) + 1;
+    }
+    
+    return categoryCounts;
+  }
+
+  /// カテゴリー別の未完了タスク数を取得
+  static Map<TaskCategory, int> getIncompleteTaskCountByCategory() {
+    final Map<TaskCategory, int> categoryCounts = {};
+    
+    // すべてのカテゴリーを0で初期化
+    for (final category in TaskCategory.values) {
+      categoryCounts[category] = 0;
+    }
+    
+    // 未完了タスクのカテゴリ別カウント
+    for (final task in _storage.search((task) => !task.isCompleted)) {
+      categoryCounts[task.category] = (categoryCounts[task.category] ?? 0) + 1;
+    }
+    
+    return categoryCounts;
+  }
+
+  /// 指定カテゴリーの完了済みタスクを取得
+  static List<TaskData> getCompletedTasksByCategory(TaskCategory category) {
+    return _storage.search((task) => task.category == category && task.isCompleted);
+  }
+
+  /// 指定カテゴリーの未完了タスクを取得
+  static List<TaskData> getIncompleteTasksByCategory(TaskCategory category) {
+    return _storage.search((task) => task.category == category && !task.isCompleted);
   }
 
   /// デバッグ用：ストレージの内部状態を取得

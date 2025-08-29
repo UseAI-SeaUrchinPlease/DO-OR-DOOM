@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:do_or_doom/feat/ai_diary/ai_diary.dart';
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
@@ -78,7 +79,7 @@ class TaskItem {
           : taskData.isDueToday()
           ? TaskPriority.high
           : TaskPriority.medium,
-      isCompleted: false, // 現在のTaskDataには完了状態がないため
+      isCompleted: taskData.isCompleted, // DBの完了状態を使用
     );
   }
 
@@ -132,6 +133,12 @@ class TaskListWidget extends StatefulWidget {
 class TaskListWidgetState extends State<TaskListWidget> {
   List<TaskItem> _tasks = [];
   final Set<String> _deletingTasks = {}; // 削除処理中のタスクID
+  final Map<String, DateTime> _recentlyCompletedTasks = {}; // 最近完了したタスクとその時刻（但しDBではまだ未完了）
+  final Map<String, DateTime> _pendingCompletionTasks = {}; // 完了予定タスク（暗い状態で表示）
+  final Map<String, Timer> _pendingTimers = {}; // 遅延完了タイマーの管理
+  bool _showCompleted = false; // 完了済みタスクを表示するかどうか
+  
+  static const Duration _undoTimeLimit = Duration(seconds: 3); // 取り消し可能時間
 
   @override
   void initState() {
@@ -158,15 +165,67 @@ class TaskListWidgetState extends State<TaskListWidget> {
     _loadTasksFromDB();
   }
 
+  // 期限切れの最近完了タスクをクリーンアップ
+  void _cleanupExpiredRecentlyCompleted() {
+    final now = DateTime.now();
+    final expiredTasks = <String>[];
+    
+    _recentlyCompletedTasks.removeWhere((taskId, completedTime) {
+      final isExpired = now.difference(completedTime) > _undoTimeLimit;
+      if (isExpired) {
+        expiredTasks.add(taskId);
+      }
+      return isExpired;
+    });
+    
+    _pendingCompletionTasks.removeWhere((taskId, completedTime) {
+      return now.difference(completedTime) > _undoTimeLimit;
+    });
+    
+    // 期限切れタスクのタイマーもクリーンアップ
+    for (final taskId in expiredTasks) {
+      _pendingTimers[taskId]?.cancel();
+      _pendingTimers.remove(taskId);
+    }
+  }
+
+  // 指定タスクのタイマーをキャンセル
+  void _cancelPendingTimer(String taskId) {
+    _pendingTimers[taskId]?.cancel();
+    _pendingTimers.remove(taskId);
+  }
+
+  // タスクが最近完了されたかチェック（取り消し可能状態）
+  bool _isRecentlyCompleted(String taskId) {
+    _cleanupExpiredRecentlyCompleted();
+    return _recentlyCompletedTasks.containsKey(taskId);
+  }
+
+  // タスクが完了待機中かチェック（暗い状態）
+  bool _isPendingCompletion(String taskId) {
+    _cleanupExpiredRecentlyCompleted();
+    return _pendingCompletionTasks.containsKey(taskId);
+  }
+
   @override
   void dispose() {
+    // 全ての未完了タイマーをキャンセル
+    for (final timer in _pendingTimers.values) {
+      timer.cancel();
+    }
+    _pendingTimers.clear();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // 全てのタスクを表示
-    final displayTasks = _tasks;
+    // フィルタリング: 完了待機中のタスクは未完了として扱う
+    final displayTasks = _tasks.where((task) {
+      final isPending = _isPendingCompletion(task.id);
+      final isActuallyCompleted = task.isCompleted && !isPending;
+      
+      return _showCompleted ? isActuallyCompleted : (!task.isCompleted || isPending);
+    }).toList();
 
     return Container(
       decoration: BoxDecoration(
@@ -195,16 +254,38 @@ class TaskListWidgetState extends State<TaskListWidget> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.list_alt, color: Color(0xFF6750A4), size: 24),
+                Icon(
+                  _showCompleted ? Icons.check_circle : Icons.list_alt, 
+                  color: const Color(0xFF6750A4), 
+                  size: 24
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'タスク一覧 (${displayTasks.length}件)',
+                    '${_showCompleted ? "完了済み" : "未完了"}タスク (${displayTasks.length}件)',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF49454F),
                     ),
+                  ),
+                ),
+                // 切り替えボタン
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6750A4).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildToggleButton('未完了', !_showCompleted, () {
+                        setState(() => _showCompleted = false);
+                      }),
+                      _buildToggleButton('完了済み', _showCompleted, () {
+                        setState(() => _showCompleted = true);
+                      }),
+                    ],
                   ),
                 ),
               ],
@@ -224,44 +305,79 @@ class TaskListWidgetState extends State<TaskListWidget> {
               itemBuilder: (context, index) {
                 final task = displayTasks[index];
                 final isDeleting = _deletingTasks.contains(task.id);
+                final isPendingCompletion = _isPendingCompletion(task.id);
 
                 return AnimatedOpacity(
-                  opacity: isDeleting ? 0.5 : 1.0,
+                  opacity: isDeleting ? 0.5 : (isPendingCompletion ? 0.6 : 1.0),
                   duration: const Duration(milliseconds: 300),
                   child: TaskItemWidget(
                     task: task,
+                    isRecentlyCompleted: _isRecentlyCompleted(task.id),
+                    isPendingCompletion: isPendingCompletion,
                     onTap: isDeleting
                         ? null
                         : () => _showTaskDetailDialog(context, task),
                     onCompletedChanged: isDeleting
                         ? null
                         : (isCompleted) async {
-                            if (isCompleted) {
-                              // 削除処理開始
-                              setState(() {
-                                _deletingTasks.add(task.id);
-                              });
-
-                              try {
-                                // DBからタスクを削除
-                                await TaskStorage.deleteTask(
-                                  int.parse(task.id),
-                                );
-
-                                // 削除完了の通知
-                                widget.onTaskCompletedChanged?.call(
-                                  task.copyWith(isCompleted: true),
-                                );
-
-                                // タスクリストを再読み込み
-                                _loadTasksFromDB();
-                              } catch (e) {
-                                // エラー時は削除処理中フラグを解除
+                            try {
+                              final taskId = task.id;
+                              
+                              if (isCompleted) {
+                                // 既存のタイマーがあればキャンセル
+                                _cancelPendingTimer(taskId);
+                                
+                                // 完了にする場合 - まだDBには書き込まず、待機状態にする
                                 setState(() {
-                                  _deletingTasks.remove(task.id);
+                                  _recentlyCompletedTasks[taskId] = DateTime.now();
+                                  _pendingCompletionTasks[taskId] = DateTime.now();
                                 });
-                                debugPrint('タスク削除エラー: $e');
+                                
+                                // 3秒後に実際にDBに書き込み、完了済みに移動
+                                final timer = Timer(_undoTimeLimit, () async {
+                                  if (mounted && _pendingCompletionTasks.containsKey(taskId)) {
+                                    try {
+                                      // DBで実際に完了状態にする
+                                      await TaskStorage.markTaskAsCompleted(int.parse(taskId));
+                                      
+                                      setState(() {
+                                        _recentlyCompletedTasks.remove(taskId);
+                                        _pendingCompletionTasks.remove(taskId);
+                                        _pendingTimers.remove(taskId);
+                                      });
+                                      
+                                      // タスクリストを再読み込み
+                                      _loadTasksFromDB();
+                                    } catch (e) {
+                                      debugPrint('遅延完了処理エラー: $e');
+                                    }
+                                  }
+                                });
+                                
+                                // タイマーを管理用Mapに保存
+                                _pendingTimers[taskId] = timer;
+                              } else {
+                                // 未完了に戻す場合
+                                if (_isPendingCompletion(taskId)) {
+                                  // 待機中のタスクの取り消し
+                                  _cancelPendingTimer(taskId);
+                                  setState(() {
+                                    _recentlyCompletedTasks.remove(taskId);
+                                    _pendingCompletionTasks.remove(taskId);
+                                  });
+                                } else {
+                                  // 実際に完了済みのタスクを未完了に戻す
+                                  await TaskStorage.markTaskAsIncomplete(int.parse(taskId));
+                                  _loadTasksFromDB();
+                                }
                               }
+
+                              // 完了状態変更の通知
+                              widget.onTaskCompletedChanged?.call(
+                                task.copyWith(isCompleted: isCompleted),
+                              );
+                            } catch (e) {
+                              debugPrint('完了状態更新エラー: $e');
                             }
                           },
                   ),
@@ -273,6 +389,32 @@ class TaskListWidgetState extends State<TaskListWidget> {
     );
   }
 
+  // 切り替えボタンを作成
+  Widget _buildToggleButton(String text, bool isSelected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected 
+              ? const Color(0xFF6750A4) 
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: isSelected 
+                ? Colors.white 
+                : const Color(0xFF6750A4),
+          ),
+        ),
+      ),
+    );
+  }
+
   // 空のコンテンツ部分のみ（ヘッダーなし）
   Widget _buildEmptyContent() {
     return Container(
@@ -280,10 +422,14 @@ class TaskListWidgetState extends State<TaskListWidget> {
       padding: const EdgeInsets.all(32),
       child: Column(
         children: [
-          Icon(Icons.task_alt, size: 64, color: Colors.grey[400]),
+          Icon(
+            _showCompleted ? Icons.check_circle_outline : Icons.task_alt,
+            size: 64, 
+            color: Colors.grey[400]
+          ),
           const SizedBox(height: 16),
           Text(
-            'タスクがありません',
+            _showCompleted ? '完了済みタスクがありません' : '未完了タスクがありません',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -292,7 +438,9 @@ class TaskListWidgetState extends State<TaskListWidget> {
           ),
           const SizedBox(height: 8),
           Text(
-            '新しいタスクを追加してみましょう',
+            _showCompleted 
+                ? 'タスクを完了してみましょう' 
+                : '新しいタスクを追加してみましょう',
             style: TextStyle(fontSize: 14, color: Colors.grey[500]),
           ),
         ],
@@ -450,12 +598,16 @@ class TaskItemWidget extends StatelessWidget {
   final TaskItem task;
   final VoidCallback? onTap;
   final Function(bool)? onCompletedChanged;
+  final bool isRecentlyCompleted; // 最近完了されたかどうか
+  final bool isPendingCompletion; // 完了待機中かどうか
 
   const TaskItemWidget({
     super.key,
     required this.task,
     this.onTap,
     this.onCompletedChanged,
+    this.isRecentlyCompleted = false,
+    this.isPendingCompletion = false,
   });
 
   @override
@@ -684,16 +836,76 @@ class TaskItemWidget extends StatelessWidget {
   }
 
   Widget _buildCheckbox() {
-    return Checkbox(
-      value: task.isCompleted,
+    // 完了待機中は見た目上チェック済み、実際のDBの状態に関係なく
+    final displayValue = isPendingCompletion ? true : task.isCompleted;
+    
+    Color checkboxColor;
+    String? tooltipMessage;
+    
+    if (isRecentlyCompleted && !isPendingCompletion) {
+      // 完了済みで取り消し可能（完了済みタスクリスト内）
+      checkboxColor = const Color(0xFF4CAF50); // 緑色
+      tooltipMessage = '3秒以内なら再度クリックで取り消し可能';
+    } else if (isPendingCompletion && isRecentlyCompleted) {
+      // 完了待機中で取り消し可能（未完了タスクリスト内）
+      checkboxColor = const Color(0xFF6750A4); // 紫色（通常と同じ）
+      tooltipMessage = '3秒以内なら再度クリックで取り消し可能';
+    } else if (isPendingCompletion) {
+      // 完了待機中だが取り消し不可
+      checkboxColor = const Color(0xFF6750A4); // 紫色（通常と同じ）
+      tooltipMessage = null;
+    } else {
+      // 通常状態
+      checkboxColor = const Color(0xFF6750A4); // 紫色
+      tooltipMessage = null;
+    }
+
+    final checkbox = Checkbox(
+      value: displayValue,
       onChanged: (bool? value) {
         if (value != null) {
           onCompletedChanged?.call(value);
         }
       },
-      activeColor: const Color(0xFF6750A4),
+      activeColor: checkboxColor,
       checkColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
     );
+
+    // ツールチップとインジケーターを追加
+    if (tooltipMessage != null) {
+      return Tooltip(
+        message: tooltipMessage,
+        decoration: BoxDecoration(
+          color: checkboxColor,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        textStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            checkbox,
+            // 取り消し可能のヒント（小さなインジケーター）
+            Positioned(
+              top: 0,
+              right: 0,
+              child: Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: checkboxColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    return checkbox;
   }
 }

@@ -266,6 +266,97 @@ class TaskStorage {
     return results;
   }
 
+  /// 完了済みタスクを取得
+  static List<TaskData> getCompletedTasks() {
+    return _taskBox.values.where((task) => task.isCompleted).toList();
+  }
+
+  /// 未完了タスクを取得
+  static List<TaskData> getIncompleteTasks() {
+    return _taskBox.values.where((task) => !task.isCompleted).toList();
+  }
+
+  /// タスクの完了状態を更新
+  static Future<void> markTaskAsCompleted(int id) async {
+    final task = getTask(id);
+    if (task != null) {
+      task.markAsCompleted();
+      await updateTask(task);
+    }
+  }
+
+  /// タスクを未完了に戻す
+  static Future<void> markTaskAsIncomplete(int id) async {
+    final task = getTask(id);
+    if (task != null) {
+      task.markAsIncomplete();
+      await updateTask(task);
+    }
+  }
+
+  /// タスクの完了状態を切り替え
+  static Future<void> toggleTaskCompleted(int id) async {
+    final task = getTask(id);
+    if (task != null) {
+      task.toggleCompleted();
+      await updateTask(task);
+    }
+  }
+
+  /// 完了タスク数を取得
+  static int getCompletedTaskCount() {
+    return _taskBox.values.where((task) => task.isCompleted).length;
+  }
+
+  /// 未完了タスク数を取得
+  static int getIncompleteTaskCount() {
+    return _taskBox.values.where((task) => !task.isCompleted).length;
+  }
+
+  /// カテゴリー別の完了タスク数を取得
+  static Map<TaskCategory, int> getCompletedTaskCountByCategory() {
+    final Map<TaskCategory, int> categoryCounts = {};
+    
+    // すべてのカテゴリーを0で初期化
+    for (final category in TaskCategory.values) {
+      categoryCounts[category] = 0;
+    }
+    
+    // 完了済みタスクのカテゴリ別カウント
+    for (final task in _taskBox.values.where((task) => task.isCompleted)) {
+      categoryCounts[task.category] = (categoryCounts[task.category] ?? 0) + 1;
+    }
+    
+    return categoryCounts;
+  }
+
+  /// カテゴリー別の未完了タスク数を取得
+  static Map<TaskCategory, int> getIncompleteTaskCountByCategory() {
+    final Map<TaskCategory, int> categoryCounts = {};
+    
+    // すべてのカテゴリーを0で初期化
+    for (final category in TaskCategory.values) {
+      categoryCounts[category] = 0;
+    }
+    
+    // 未完了タスクのカテゴリ別カウント
+    for (final task in _taskBox.values.where((task) => !task.isCompleted)) {
+      categoryCounts[task.category] = (categoryCounts[task.category] ?? 0) + 1;
+    }
+    
+    return categoryCounts;
+  }
+
+  /// 指定カテゴリーの完了済みタスクを取得
+  static List<TaskData> getCompletedTasksByCategory(TaskCategory category) {
+    return _taskBox.values.where((task) => task.category == category && task.isCompleted).toList();
+  }
+
+  /// 指定カテゴリーの未完了タスクを取得
+  static List<TaskData> getIncompleteTasksByCategory(TaskCategory category) {
+    return _taskBox.values.where((task) => task.category == category && !task.isCompleted).toList();
+  }
+
   /// ストレージを閉じる
   static Future<void> close() async {
     await _box?.close();
