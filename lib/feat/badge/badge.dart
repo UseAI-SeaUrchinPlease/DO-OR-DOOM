@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import '../../core/services/task_storage.dart';
 import '../../core/services/badge_service.dart';
 import '../../core/models/task_data.dart';
+import 'share_utils.dart';
 
 // バッジ機能ウィジェット
 class TaskBadge extends StatefulWidget {
@@ -117,6 +118,44 @@ class _TaskBadgeState extends State<TaskBadge> with SingleTickerProviderStateMix
         child: _buildBadgeContent(),
       ),
       actions: [
+        IconButton(
+          onPressed: () async {
+            try {
+              if (badgeData?.imageData != null) {
+                await shareBytesAsImage(badgeData!.imageData!, filename: '${badgeData!.name.replaceAll(" ", "_")}.png', text: badgeData!.name);
+                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('共有シートを開きました')));
+              }
+            } catch (e) {
+              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('共有に失敗しました: $e')));
+            }
+          },
+          icon: const Icon(Icons.share, color: Color(0xFF6750A4)),
+          tooltip: '共有',
+        ),
+        IconButton(
+          onPressed: () async {
+            try {
+              await shareToTwitter(badgeData?.name ?? '');
+              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Twitterの画面を開きます')));
+            } catch (e) {
+              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Twitter共有に失敗しました: $e')));
+            }
+          },
+          icon: const Icon(Icons.alternate_email, color: Color(0xFF1DA1F2)),
+          tooltip: 'Twitter',
+        ),
+        IconButton(
+          onPressed: () async {
+            try {
+              await shareToLine(badgeData?.name ?? '');
+              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('LINEの画面を開きます')));
+            } catch (e) {
+              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('LINE共有に失敗しました: $e')));
+            }
+          },
+          icon: const Icon(Icons.chat, color: Color(0xFF00B900)),
+          tooltip: 'LINE',
+        ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('閉じる'),
