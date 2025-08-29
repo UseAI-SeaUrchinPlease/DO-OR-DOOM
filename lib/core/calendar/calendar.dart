@@ -29,7 +29,7 @@ class CalendarWidgetState extends State<CalendarWidget> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -76,7 +76,7 @@ class CalendarWidgetState extends State<CalendarWidget> {
             ),
           ),
           selectionDecoration: BoxDecoration(
-            color: const Color(0xFF6750A4).withOpacity(0.2),
+            color: const Color(0xFF6750A4).withValues(alpha: 0.2),
             border: Border.all(color: const Color(0xFF6750A4), width: 2),
             borderRadius: BorderRadius.circular(8),
           ),
@@ -145,15 +145,33 @@ class CalendarWidgetState extends State<CalendarWidget> {
     );
   }
 
-  // タスクの状態に応じて色を決定
+  // タスクのカテゴリと状態に応じて色を決定
   Color _getTaskColor(TaskData task) {
+    // 基本色はカテゴリ色を使用
+    Color baseColor = task.getCategoryColor();
+    
+    // 期限切れの場合は暗くする
     if (task.isOverdue()) {
-      return const Color(0xFFFF0000); // 赤（期限切れ）
-    } else if (task.isDueToday()) {
-      return const Color(0xFFFF8800); // オレンジ（今日が期限）
-    } else {
-      return const Color(0xFF6750A4); // 紫（通常）
+      return _darkenColor(baseColor, 0.3);
+    } 
+    // 今日が期限の場合は少し暗くする
+    else if (task.isDueToday()) {
+      return _darkenColor(baseColor, 0.15);
+    } 
+    // 通常はカテゴリ色をそのまま使用
+    else {
+      return baseColor;
     }
+  }
+
+  // 色を暗くするヘルパーメソッド
+  Color _darkenColor(Color color, double factor) {
+    assert(factor >= 0 && factor <= 1);
+    
+    final hsl = HSLColor.fromColor(color);
+    final hslDark = hsl.withLightness((hsl.lightness * (1 - factor)).clamp(0.0, 1.0));
+    
+    return hslDark.toColor();
   }
 
   // タスクの変更を外部から通知する
@@ -162,6 +180,13 @@ class CalendarWidgetState extends State<CalendarWidget> {
   }
 
   void _showAppointmentDetails(BuildContext context, Appointment appointment) {
+    // IDからタスクデータを取得
+    final taskId = int.tryParse(appointment.id?.toString() ?? '');
+    TaskData? task;
+    if (taskId != null) {
+      task = TaskStorage.getTask(taskId);
+    }
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -195,6 +220,10 @@ class CalendarWidgetState extends State<CalendarWidget> {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+              if (task != null) ...[
+                _buildDetailRow(task.getCategoryIcon(), 'カテゴリ', task.getCategoryDisplayName(), iconColor: task.getCategoryColor()),
+                const SizedBox(height: 12),
+              ],
               _buildDetailRow(Icons.access_time, '開始時間', _formatDateTime(appointment.startTime)),
               const SizedBox(height: 12),
               _buildDetailRow(Icons.access_time_filled, '終了時間', _formatDateTime(appointment.endTime)),
@@ -227,11 +256,11 @@ class CalendarWidgetState extends State<CalendarWidget> {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value) {
+  Widget _buildDetailRow(IconData icon, String label, String value, {Color? iconColor}) {
     return Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-        Icon(icon, size: 16, color: const Color(0xFF6750A4)),
+        Icon(icon, size: 16, color: iconColor ?? const Color(0xFF6750A4)),
         const SizedBox(width: 8),
                                               Text(
           '$label: ',
@@ -261,7 +290,7 @@ class CalendarWidgetState extends State<CalendarWidget> {
       context: context,
       barrierDismissible: true,
       barrierLabel: '',
-      barrierColor: Colors.black.withOpacity(0.5),
+      barrierColor: Colors.black.withValues(alpha: 0.5),
       transitionDuration: const Duration(milliseconds: 200),
       pageBuilder: (context, animation, secondaryAnimation) {
         return Center(
@@ -276,7 +305,7 @@ class CalendarWidgetState extends State<CalendarWidget> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
+                  color: Colors.black.withValues(alpha: 0.3),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                                               ),

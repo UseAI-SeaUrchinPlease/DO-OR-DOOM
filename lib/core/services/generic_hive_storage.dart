@@ -6,21 +6,32 @@ class GenericHiveStorage<T extends HiveObject> {
   final String boxName;
   final int typeId;
   final TypeAdapter<T> adapter;
+  final List<TypeAdapter>? additionalAdapters;
   Box<T>? _box;
 
   GenericHiveStorage({
     required this.boxName,
     required this.typeId,
     required this.adapter,
+    this.additionalAdapters,
   });
 
   /// Hiveを初期化し、ボックスを開く
   Future<void> init() async {
     await Hive.initFlutter();
 
-    // アダプターを登録
+    // メインアダプターを登録
     if (!Hive.isAdapterRegistered(typeId)) {
       Hive.registerAdapter(adapter);
+    }
+
+    // 追加アダプターを登録
+    if (additionalAdapters != null) {
+      for (final additionalAdapter in additionalAdapters!) {
+        if (!Hive.isAdapterRegistered(additionalAdapter.typeId)) {
+          Hive.registerAdapter(additionalAdapter);
+        }
+      }
     }
 
     // ボックスを開く

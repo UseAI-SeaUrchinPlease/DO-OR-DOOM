@@ -22,6 +22,7 @@ class _TaskEditState extends State<TaskEdit> {
   TaskData? _currentTask;
   bool _isLoading = true;
   DateTime _selectedDueDate = DateTime.now().add(const Duration(days: 1));
+  TaskCategory _selectedCategory = TaskCategory.task;
 
   @override
   void initState() {
@@ -37,6 +38,7 @@ class _TaskEditState extends State<TaskEdit> {
         _taskNameController.text = _currentTask!.task;
         _detailsController.text = _currentTask!.description ?? '';
         _selectedDueDate = _currentTask!.due;
+        _selectedCategory = _currentTask!.category;
       }
     } else {
       // 新規タスクの場合はデフォルト値を設定
@@ -123,6 +125,10 @@ class _TaskEditState extends State<TaskEdit> {
               ),
               const SizedBox(height: 16),
 
+              // カテゴリ選択セクション
+              _buildCategorySection(),
+              const SizedBox(height: 16),
+
               // 詳細セクション
               DetailsSection(controller: _detailsController),
               const SizedBox(height: 28),
@@ -141,7 +147,7 @@ class _TaskEditState extends State<TaskEdit> {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 4,
               offset: const Offset(0, -2),
             ),
@@ -174,6 +180,147 @@ class _TaskEditState extends State<TaskEdit> {
     );
   }
 
+  Widget _buildCategorySection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: _selectedCategory.lightColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _selectedCategory.color.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ヘッダー
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: _selectedCategory.lightColor.withValues(alpha: 0.2),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.category,
+                  color: _selectedCategory.color,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'カテゴリ',
+                  style: TextStyle(
+                    color: _selectedCategory.color,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // ドロップダウン
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: DropdownButtonFormField<TaskCategory>(
+              value: _selectedCategory,
+              decoration: InputDecoration(
+                border: const OutlineInputBorder(),
+                prefixIcon: Icon(_selectedCategory.icon, color: _selectedCategory.color),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: _selectedCategory.color, width: 2),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: _selectedCategory.color),
+                ),
+                fillColor: Colors.white,
+                filled: true,
+              ),
+              dropdownColor: Colors.white,
+              selectedItemBuilder: (BuildContext context) {
+                return TaskCategory.values.map((TaskCategory category) {
+                  return Row(
+                    children: [
+                      Text(
+                        category.displayName,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                          color: category.color,
+                        ),
+                      ),
+                    ],
+                  );
+                }).toList();
+              },
+              items: TaskCategory.values.map((TaskCategory category) {
+                return DropdownMenuItem<TaskCategory>(
+                  value: category,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      children: [
+                        Icon(
+                          category.icon,
+                          color: category.color,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                category.displayName,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                  color: category.color,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                category.description,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey[600],
+                                  height: 1.2,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+              onChanged: (TaskCategory? newValue) {
+                if (newValue != null) {
+                  setState(() {
+                    _selectedCategory = newValue;
+                  });
+                }
+              },
+              isExpanded: true,
+              icon: Icon(
+                Icons.arrow_drop_down,
+                color: _selectedCategory.color,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _saveTask() async {
     if (widget.taskId != null && _currentTask != null) {
       // 既存タスクを更新
@@ -188,6 +335,7 @@ class _TaskEditState extends State<TaskEdit> {
         image2: _currentTask!.image2, // 既存の画像データを保持
         sentence1: _currentTask!.sentence1, // 既存のsentence1データを保持
         sentence2: _currentTask!.sentence2, // 既存のsentence2データを保持
+        category: _selectedCategory, // カテゴリ情報を更新
       );
 
       await TaskStorage.updateTask(updatedTask);

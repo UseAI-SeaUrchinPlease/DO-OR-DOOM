@@ -1,7 +1,97 @@
 import 'dart:typed_data';
 import 'package:hive/hive.dart';
+import 'package:flutter/material.dart';
 
 part 'task_data.g.dart';
+
+@HiveType(typeId: 1)
+enum TaskCategory {
+  @HiveField(0)
+  task, // タスク追加(自発的に行動しないと消化されないもの)
+  
+  @HiveField(1)
+  event, // イベント(決まった時間に行動を起こす必要があるもの)
+  
+  @HiveField(2)
+  period, // 期間(自発的な行動を起こす必要はないが、生活になんらかの変化がある)
+  
+  @HiveField(3)
+  repeat, // 繰り返し(特定の周期ごとに行う)
+  
+  @HiveField(4)
+  goal, // ゴール(超長期的な目標、複数のタスクを完了することで完了できるもの)
+}
+
+extension TaskCategoryExtension on TaskCategory {
+  /// カテゴリー名を日本語で取得
+  String get displayName {
+    switch (this) {
+      case TaskCategory.task:
+        return 'タスク';
+      case TaskCategory.event:
+        return 'イベント';
+      case TaskCategory.period:
+        return '期間';
+      case TaskCategory.repeat:
+        return '繰り返し';
+      case TaskCategory.goal:
+        return 'ゴール';
+    }
+  }
+  
+  /// カテゴリー説明を取得
+  String get description {
+    switch (this) {
+      case TaskCategory.task:
+        return '自発的に行動しないと消化されないもの\n例: レポート作成、掃除、買い物';
+      case TaskCategory.event:
+        return '決まった時間に行動を起こす必要があるもの\n例: ミーティング、友達と遊びに行く';
+      case TaskCategory.period:
+        return '一定の期間中、生活になんらかの変化がある\n例: 夏休み、旅行';
+      case TaskCategory.repeat:
+        return '特定の周期ごとに行うもの\n例: 毎週木曜日にゴミ出し、毎月末に報告書を作成する';
+      case TaskCategory.goal:
+        return '超長期的な目標、複数のタスクを完了することで完了できるもの\n例: 東京大学に合格、10Kg痩せる、簿記3級を取得する';
+    }
+  }
+  
+  /// カテゴリー別の色を取得
+  Color get color {
+    switch (this) {
+      case TaskCategory.task:
+        return const Color(0xFF6750A4); // パープル
+      case TaskCategory.event:
+        return const Color(0xFF1976D2); // ブルー
+      case TaskCategory.period:
+        return const Color(0xFF388E3C); // グリーン
+      case TaskCategory.repeat:
+        return const Color(0xFFF57C00); // オレンジ
+      case TaskCategory.goal:
+        return const Color(0xFFD32F2F); // レッド
+    }
+  }
+  
+  /// カテゴリー別の淡い色を取得（背景用）
+  Color get lightColor {
+    return color.withValues(alpha: 0.1);
+  }
+  
+  /// カテゴリー別のアイコンを取得
+  IconData get icon {
+    switch (this) {
+      case TaskCategory.task:
+        return Icons.assignment;
+      case TaskCategory.event:
+        return Icons.event;
+      case TaskCategory.period:
+        return Icons.schedule;
+      case TaskCategory.repeat:
+        return Icons.repeat;
+      case TaskCategory.goal:
+        return Icons.flag;
+    }
+  }
+}
 
 @HiveType(typeId: 0)
 class TaskData extends HiveObject {
@@ -29,6 +119,9 @@ class TaskData extends HiveObject {
   @HiveField(7)
   String? sentence2;
 
+  @HiveField(8)
+  TaskCategory category;
+
   TaskData({
     required this.id,
     required this.task,
@@ -38,6 +131,7 @@ class TaskData extends HiveObject {
     this.image2,
     this.sentence1,
     this.sentence2,
+    this.category = TaskCategory.task, // デフォルトはタスク
   });
 
   /// image1データが存在するかチェック
@@ -158,8 +252,38 @@ class TaskData extends HiveObject {
     return '${due.year}/${due.month.toString().padLeft(2, '0')}/${due.day.toString().padLeft(2, '0')}';
   }
 
+  /// カテゴリー名を取得
+  String getCategoryDisplayName() {
+    return category.displayName;
+  }
+
+  /// カテゴリーの色を取得
+  Color getCategoryColor() {
+    return category.color;
+  }
+
+  /// カテゴリーの淡い色を取得
+  Color getCategoryLightColor() {
+    return category.lightColor;
+  }
+
+  /// カテゴリーのアイコンを取得
+  IconData getCategoryIcon() {
+    return category.icon;
+  }
+
+  /// カテゴリーの説明を取得
+  String getCategoryDescription() {
+    return category.description;
+  }
+
+  /// 指定したカテゴリーかどうかをチェック
+  bool isCategory(TaskCategory targetCategory) {
+    return category == targetCategory;
+  }
+
   @override
   String toString() {
-    return 'TaskData{id: $id, task: $task, due: $due, image1: ${getImage1Size()} bytes, image2: ${getImage2Size()} bytes, description: ${description ?? "null"}, sentence1: ${sentence1 ?? "null"}, sentence2: ${sentence2 ?? "null"}}';
+    return 'TaskData{id: $id, task: $task, due: $due, category: ${category.displayName}, image1: ${getImage1Size()} bytes, image2: ${getImage2Size()} bytes, description: ${description ?? "null"}, sentence1: ${sentence1 ?? "null"}, sentence2: ${sentence2 ?? "null"}}';
   }
 }

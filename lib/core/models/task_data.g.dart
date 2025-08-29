@@ -25,13 +25,14 @@ class TaskDataAdapter extends TypeAdapter<TaskData> {
       image2: fields[5] as Uint8List?,
       sentence1: fields[6] as String?,
       sentence2: fields[7] as String?,
+      category: fields[8] as TaskCategory,
     );
   }
 
   @override
   void write(BinaryWriter writer, TaskData obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -47,7 +48,9 @@ class TaskDataAdapter extends TypeAdapter<TaskData> {
       ..writeByte(6)
       ..write(obj.sentence1)
       ..writeByte(7)
-      ..write(obj.sentence2);
+      ..write(obj.sentence2)
+      ..writeByte(8)
+      ..write(obj.category);
   }
 
   @override
@@ -57,6 +60,60 @@ class TaskDataAdapter extends TypeAdapter<TaskData> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is TaskDataAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class TaskCategoryAdapter extends TypeAdapter<TaskCategory> {
+  @override
+  final int typeId = 1;
+
+  @override
+  TaskCategory read(BinaryReader reader) {
+    switch (reader.readByte()) {
+      case 0:
+        return TaskCategory.task;
+      case 1:
+        return TaskCategory.event;
+      case 2:
+        return TaskCategory.period;
+      case 3:
+        return TaskCategory.repeat;
+      case 4:
+        return TaskCategory.goal;
+      default:
+        return TaskCategory.task;
+    }
+  }
+
+  @override
+  void write(BinaryWriter writer, TaskCategory obj) {
+    switch (obj) {
+      case TaskCategory.task:
+        writer.writeByte(0);
+        break;
+      case TaskCategory.event:
+        writer.writeByte(1);
+        break;
+      case TaskCategory.period:
+        writer.writeByte(2);
+        break;
+      case TaskCategory.repeat:
+        writer.writeByte(3);
+        break;
+      case TaskCategory.goal:
+        writer.writeByte(4);
+        break;
+    }
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TaskCategoryAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

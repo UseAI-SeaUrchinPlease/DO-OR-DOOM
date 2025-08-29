@@ -21,6 +21,7 @@ class _AddTaskWidgetState extends State<AddTaskWidget> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
+  TaskCategory _selectedCategory = TaskCategory.task;
 
   @override
   void initState() {
@@ -43,13 +44,17 @@ class _AddTaskWidgetState extends State<AddTaskWidget> {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFFECE6F0),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: const Color(0xFF6750A4).withValues(alpha: 0.4),
+          width: 2,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: const Color(0xFF6750A4).withValues(alpha: 0.15),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -58,61 +63,215 @@ class _AddTaskWidgetState extends State<AddTaskWidget> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // タイトル
-          const Text(
-            '新規タスク登録',
-            style: TextStyle(
-              color: Color(0xFF49454F),
-              fontSize: 20,
-              fontFamily: 'Roboto',
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.10,
-            ),
+          const Row(
+            children: [
+              Icon(
+                Icons.add_task,
+                color: Color(0xFF6750A4),
+                size: 24,
+              ),
+              SizedBox(width: 8),
+              Text(
+                '新規タスク登録',
+                style: TextStyle(
+                  color: Color(0xFF6750A4),
+                  fontSize: 20,
+                  fontFamily: 'Roboto',
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.10,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 24),
 
           // タスク名入力
-          TextField(
-            controller: _titleController,
-            decoration: const InputDecoration(
-              labelText: 'タスク名',
-              hintText: 'タスク名を入力してください',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.task, color: Color(0xFF6750A4)),
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF6750A4).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
             ),
-            style: const TextStyle(fontSize: 16),
+            child: TextField(
+              controller: _titleController,
+              decoration: const InputDecoration(
+                labelText: 'タスク名',
+                hintText: 'タスク名を入力してください',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.task, color: Color(0xFF6750A4)),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Color(0xFF6750A4), width: 2),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Color(0xFF6750A4)),
+                ),
+                labelStyle: TextStyle(color: Color(0xFF6750A4)),
+                fillColor: Colors.white,
+                filled: true,
+              ),
+              style: const TextStyle(fontSize: 16),
+            ),
           ),
           const SizedBox(height: 16),
 
           // 日付選択
-          InkWell(
-            onTap: () => _selectDate(context),
-            child: InputDecorator(
-              decoration: const InputDecoration(
-                labelText: '日付',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.calendar_today, color: Color(0xFF6750A4)),
-              ),
-              child: Text(
-                '${_selectedDate.year}/${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.day.toString().padLeft(2, '0')}',
-                style: const TextStyle(fontSize: 16),
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF6750A4).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: InkWell(
+              onTap: () => _selectDate(context),
+              borderRadius: BorderRadius.circular(8),
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: '日付',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.calendar_today, color: Color(0xFF6750A4)),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFF6750A4), width: 2),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFF6750A4)),
+                  ),
+                  labelStyle: TextStyle(color: Color(0xFF6750A4)),
+                  fillColor: Colors.white,
+                  filled: true,
+                ),
+                child: Text(
+                  '${_selectedDate.year}/${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.day.toString().padLeft(2, '0')}',
+                  style: const TextStyle(fontSize: 16),
+                ),
               ),
             ),
           ),
           const SizedBox(height: 16),
 
-
+          // カテゴリ選択
+          Container(
+            decoration: BoxDecoration(
+              color: _selectedCategory.lightColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: DropdownButtonFormField<TaskCategory>(
+              value: _selectedCategory,
+              decoration: InputDecoration(
+                labelText: 'カテゴリ',
+                border: const OutlineInputBorder(),
+                prefixIcon: Icon(_selectedCategory.icon, color: _selectedCategory.color),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: _selectedCategory.color, width: 2),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: _selectedCategory.color),
+                ),
+                labelStyle: TextStyle(color: _selectedCategory.color),
+                fillColor: Colors.white,
+                filled: true,
+              ),
+              dropdownColor: Colors.white,
+              selectedItemBuilder: (BuildContext context) {
+                return TaskCategory.values.map((TaskCategory category) {
+                  return Row(
+                    children: [
+                      Text(
+                        category.displayName,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                          color: category.color,
+                        ),
+                      ),
+                    ],
+                  );
+                }).toList();
+              },
+              items: TaskCategory.values.map((TaskCategory category) {
+                return DropdownMenuItem<TaskCategory>(
+                  value: category,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      children: [
+                        Icon(
+                          category.icon,
+                          color: category.color,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                category.displayName,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                  color: category.color,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                category.description,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey[600],
+                                  height: 1.2,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+              onChanged: (TaskCategory? newValue) {
+                if (newValue != null) {
+                  setState(() {
+                    _selectedCategory = newValue;
+                  });
+                }
+              },
+              isExpanded: true,
+              icon: Icon(
+                Icons.arrow_drop_down,
+                color: _selectedCategory.color,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
 
           // 詳細入力
-          TextField(
-            controller: _descriptionController,
-            decoration: const InputDecoration(
-              labelText: '詳細・メモ',
-              hintText: '詳細を入力してください（任意）',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.note, color: Color(0xFF6750A4)),
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF6750A4).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
             ),
-            maxLines: 3,
-            style: const TextStyle(fontSize: 16),
+            child: TextField(
+              controller: _descriptionController,
+              decoration: const InputDecoration(
+                labelText: '詳細・メモ',
+                hintText: '詳細を入力してください（任意）',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.note, color: Color(0xFF6750A4)),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Color(0xFF6750A4), width: 2),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Color(0xFF6750A4)),
+                ),
+                labelStyle: TextStyle(color: Color(0xFF6750A4)),
+                fillColor: Colors.white,
+                filled: true,
+              ),
+              maxLines: 3,
+              style: const TextStyle(fontSize: 16),
+            ),
           ),
           const SizedBox(height: 16),
 
@@ -180,6 +339,7 @@ class _AddTaskWidgetState extends State<AddTaskWidget> {
       _titleController.clear();
       _descriptionController.clear();
       _selectedDate = widget.initialDate ?? DateTime.now();
+      _selectedCategory = TaskCategory.task;
     });
   }
 
@@ -201,6 +361,7 @@ class _AddTaskWidgetState extends State<AddTaskWidget> {
         description: _descriptionController.text.trim().isEmpty 
             ? null 
             : _descriptionController.text.trim(),
+        category: _selectedCategory,
       );
 
       // Hiveストレージに保存
