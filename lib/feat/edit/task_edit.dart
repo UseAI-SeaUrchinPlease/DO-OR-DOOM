@@ -173,6 +173,17 @@ class _TaskEditState extends State<TaskEdit> {
                   child: const Text('保存'),
                 ),
               ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => _showDeleteConfirmationDialog(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('削除'),
+                ),
+              ),
             ],
           ],
         ),
@@ -362,5 +373,117 @@ class _TaskEditState extends State<TaskEdit> {
         },
       );
     });
+  }
+
+  // タスク削除確認ダイアログ
+  void _showDeleteConfirmationDialog(BuildContext context) {
+    if (_currentTask == null) return;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.warning, color: Colors.red, size: 24),
+              SizedBox(width: 8),
+              Text('タスクを削除'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '以下のタスクを完全に削除しますか？',
+                style: TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _currentTask!.task,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '期限: ${_currentTask!.getDueDateString()}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    Text(
+                      'カテゴリ: ${_currentTask!.getCategoryDisplayName()}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                '※この操作は取り消せません',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('キャンセル'),
+            ),
+            TextButton(
+              onPressed: () async {
+                try {
+                  // タスクをDBから削除
+                  await TaskStorage.deleteTask(_currentTask!.id);
+                  
+                  // ダイアログを閉じる
+                  if (context.mounted) {
+                    Navigator.of(context).pop(); // 削除確認ダイアログを閉じる
+                    Navigator.of(context).pop(true); // 編集画面を閉じて削除完了を示す
+                  }
+                } catch (e) {
+                  // エラーハンドリング
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('削除に失敗しました: $e'),
+                        backgroundColor: Colors.red,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                }
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('削除'),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
