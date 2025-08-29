@@ -90,19 +90,20 @@ class HeaderWidget extends StatelessWidget implements PreferredSizeWidget {
           actions: [
             if (todayTasks.isNotEmpty) // タスクがある場合のみ表示
               TextButton.icon(
-                onPressed: () {
+                onPressed: () async {
                   Navigator.of(context).pop(); // モーダルを閉じる
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => AiDiary(tasks: todayTasks),
-                    ),
+                  // モーダルが完全に閉じるまで少し待つ
+                  await Future.delayed(Duration(milliseconds: 100));
+                  showDialog(
+                    context: context,
+                    builder: (context) => AiDiary(tasks: todayTasks),
                   );
                 },
-                icon: Icon(
-                  Icons.auto_fix_high,
+                icon: Image.asset(
+                  'assets/icons/calendar-ai.png',
+                  width: 18,
+                  height: 18,
                   color: Color(0xFF6750A4),
-                  size: 18,
                 ),
                 label: Text(
                   'AI絵日記',
