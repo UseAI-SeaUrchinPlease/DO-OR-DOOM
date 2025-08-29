@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'feat/root/root.dart' as root;
 import 'core/services/task_storage.dart';
+import 'core/services/daily_diary_storage.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Hiveストレージを初期化
   await TaskStorage.init();
-  
+  await DailyDiaryStorage.initialize();
+
   runApp(const MainApp());
 }
 
@@ -20,7 +22,7 @@ class MainApp extends StatelessWidget {
       title: 'DO OR DOOM - タスク管理カレンダー',
       theme: ThemeData(
         useMaterial3: true,
-                                    fontFamily: 'Roboto',
+        fontFamily: 'Roboto',
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF6750A4),
           brightness: Brightness.light,
@@ -32,7 +34,7 @@ class MainApp extends StatelessWidget {
         ),
         cardTheme: const CardThemeData(
           elevation: 2,
-                                      shape: RoundedRectangleBorder(
+          shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(12)),
           ),
         ),
