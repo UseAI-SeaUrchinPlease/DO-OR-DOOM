@@ -51,17 +51,28 @@ class TaskItem {
 
   // TaskDataから変換
   factory TaskItem.fromTaskData(TaskData taskData) {
+    // カテゴリ色をベースにして、期限状態で調整
+    Color baseColor = taskData.getCategoryColor();
+    Color displayColor;
+    
+    if (taskData.isOverdue()) {
+      // 期限切れの場合は暗くする
+      displayColor = _darkenColor(baseColor, 0.3);
+    } else if (taskData.isDueToday()) {
+      // 今日が期限の場合は少し暗くする
+      displayColor = _darkenColor(baseColor, 0.15);
+    } else {
+      // 通常はカテゴリ色をそのまま使用
+      displayColor = baseColor;
+    }
+    
     return TaskItem(
       id: taskData.id.toString(),
       title: taskData.task,
       date: taskData.due,
       dueTime: null, // TaskDataには時間情報がないため
       description: taskData.description,
-      color: taskData.isOverdue()
-          ? Colors.red
-          : taskData.isDueToday()
-          ? Colors.orange
-          : const Color(0xFF6750A4),
+      color: displayColor,
       priority: taskData.isOverdue()
           ? TaskPriority.urgent
           : taskData.isDueToday()
@@ -69,6 +80,16 @@ class TaskItem {
           : TaskPriority.medium,
       isCompleted: false, // 現在のTaskDataには完了状態がないため
     );
+  }
+
+  // 色を暗くするヘルパーメソッド
+  static Color _darkenColor(Color color, double factor) {
+    assert(factor >= 0 && factor <= 1);
+    
+    final hsl = HSLColor.fromColor(color);
+    final hslDark = hsl.withLightness((hsl.lightness * (1 - factor)).clamp(0.0, 1.0));
+    
+    return hslDark.toColor();
   }
 
   // Appointmentから変換（カレンダー用）
@@ -153,7 +174,7 @@ class TaskListWidgetState extends State<TaskListWidget> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -281,6 +302,13 @@ class TaskListWidgetState extends State<TaskListWidget> {
 
   // タスク詳細ダイアログ
   void _showTaskDetailDialog(BuildContext context, TaskItem task) {
+    // IDからタスクデータを取得してカテゴリ情報を表示
+    final taskId = int.tryParse(task.id);
+    TaskData? taskData;
+    if (taskId != null) {
+      taskData = TaskStorage.getTask(taskId);
+    }
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -314,11 +342,29 @@ class TaskListWidgetState extends State<TaskListWidget> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (taskData != null) ...[
+                _buildDetailRow(
+                  taskData.getCategoryIcon(),
+                  'カテゴリ',
+                  taskData.getCategoryDisplayName(),
+                  iconColor: taskData.getCategoryColor(),
+                ),
+                const SizedBox(height: 12),
+              ],
               _buildDetailRow(
                 Icons.calendar_today,
                 '日付',
                 '${task.date.year}/${task.date.month.toString().padLeft(2, '0')}/${task.date.day.toString().padLeft(2, '0')}',
               ),
+              if (taskData != null) ...[
+                const SizedBox(height: 12),
+                _buildDetailRow(
+                  Icons.priority_high,
+                  '状態',
+                  _getTaskStatusText(taskData),
+                  iconColor: _getTaskStatusColor(taskData),
+                ),
+              ],
               if (task.dueTime != null) ...[
                 const SizedBox(height: 12),
                 _buildDetailRow(
@@ -327,7 +373,6 @@ class TaskListWidgetState extends State<TaskListWidget> {
                   '${task.dueTime!.hour.toString().padLeft(2, '0')}:${task.dueTime!.minute.toString().padLeft(2, '0')}',
                 ),
               ],
-
               if (task.description?.isNotEmpty == true) ...[
                 const SizedBox(height: 12),
                 _buildDetailRow(Icons.note, '詳細', task.description!),
@@ -345,11 +390,45 @@ class TaskListWidgetState extends State<TaskListWidget> {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value) {
+  // タスクの状態テキストを取得
+  String _getTaskStatusText(TaskData taskData) {
+    if (taskData.isOverdue()) {
+      return '期限切れ';
+    } else if (taskData.isDueToday()) {
+      return '今日が期限';
+    } else {
+      final remainingDays = taskData.daysUntilDue();
+      if (remainingDays == 1) {
+        return '明日が期限';
+      } else if (remainingDays <= 7) {
+        return 'あと${remainingDays}日';
+      } else {
+        return '通常';
+      }
+    }
+  }
+
+  // タスクの状態色を取得
+  Color _getTaskStatusColor(TaskData taskData) {
+    if (taskData.isOverdue()) {
+      return Colors.red;
+    } else if (taskData.isDueToday()) {
+      return Colors.orange;
+    } else {
+      final remainingDays = taskData.daysUntilDue();
+      if (remainingDays <= 3) {
+        return Colors.amber;
+      } else {
+        return Colors.green;
+      }
+    }
+  }
+
+  Widget _buildDetailRow(IconData icon, String label, String value, {Color? iconColor}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 16, color: const Color(0xFF6750A4)),
+        Icon(icon, size: 16, color: iconColor ?? const Color(0xFF6750A4)),
         const SizedBox(width: 8),
         Text(
           '$label: ',
@@ -407,41 +486,93 @@ class TaskItemWidget extends StatelessWidget {
   }
 
   Widget _buildDateIcon() {
+    // IDからタスクデータを取得してカテゴリアイコンを表示
+    final taskId = int.tryParse(task.id);
+    TaskData? taskData;
+    if (taskId != null) {
+      taskData = TaskStorage.getTask(taskId);
+    }
+
     return Container(
-      width: 40,
-      height: 40,
+      width: 48,
+      height: 48,
       decoration: ShapeDecoration(
-        color: task.color.withOpacity(0.2),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        color: task.color.withValues(alpha: 0.2),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       ),
-      child: Center(
-        child: Text(
-          '${task.date.month}/${task.date.day}',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: task.color,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (taskData != null) ...[
+            Icon(
+              taskData.getCategoryIcon(),
+              color: task.color,
+              size: 16,
+            ),
+            const SizedBox(height: 2),
+          ],
+          Text(
+            '${task.date.month}/${task.date.day}',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: task.color,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
   Widget _buildTaskInfo() {
+    // IDからタスクデータを取得して状態情報を表示
+    final taskId = int.tryParse(task.id);
+    TaskData? taskData;
+    if (taskId != null) {
+      taskData = TaskStorage.getTask(taskId);
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          task.title,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w400,
-            color: Color(0xFF1D1B20), // Schemes-On-Surface
-            height: 1.50,
-            letterSpacing: 0.50,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                task.title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w400,
+                  color: Color(0xFF1D1B20), // Schemes-On-Surface
+                  height: 1.50,
+                  letterSpacing: 0.50,
+                ),
+              ),
+            ),
+            if (taskData != null) ...[
+              const SizedBox(width: 8),
+              _buildStatusChip(taskData),
+            ],
+          ],
         ),
+        if (taskData != null) ...[
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Icon(taskData.getCategoryIcon(), size: 12, color: taskData.getCategoryColor()),
+              const SizedBox(width: 4),
+              Text(
+                taskData.getCategoryDisplayName(),
+                style: TextStyle(
+                  fontSize: 12, 
+                  color: taskData.getCategoryColor(),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ],
         if (task.dueTime != null) ...[
           const SizedBox(height: 4),
           Row(
@@ -465,6 +596,52 @@ class TaskItemWidget extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+
+  // 状態チップを作成
+  Widget _buildStatusChip(TaskData taskData) {
+    String statusText;
+    Color statusColor;
+    
+    if (taskData.isOverdue()) {
+      statusText = '期限切れ';
+      statusColor = Colors.red;
+    } else if (taskData.isDueToday()) {
+      statusText = '今日';
+      statusColor = Colors.orange;
+    } else {
+      final remainingDays = taskData.daysUntilDue();
+      if (remainingDays == 1) {
+        statusText = '明日';
+        statusColor = Colors.amber;
+      } else if (remainingDays <= 3) {
+        statusText = '${remainingDays}日後';
+        statusColor = Colors.amber;
+      } else if (remainingDays <= 7) {
+        statusText = '${remainingDays}日後';
+        statusColor = Colors.green;
+      } else {
+        statusText = '${remainingDays}日後';
+        statusColor = Colors.grey;
+      }
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: statusColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: statusColor.withValues(alpha: 0.3), width: 1),
+      ),
+      child: Text(
+        statusText,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: statusColor,
+        ),
+      ),
     );
   }
 
