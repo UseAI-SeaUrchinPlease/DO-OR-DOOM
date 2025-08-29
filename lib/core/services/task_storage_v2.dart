@@ -1,4 +1,5 @@
 import '../models/task_data.dart';
+import 'badge_service.dart';
 import 'generic_hive_storage.dart';
 
 /// TaskData専用のストレージクラス
@@ -300,8 +301,19 @@ class TaskStorageV2 {
   static Future<void> markTaskAsCompleted(int id) async {
     final task = getTask(id);
     if (task != null) {
+      final wasCompleted = task.isCompleted;
       task.markAsCompleted();
       await updateTask(task);
+
+      if (!wasCompleted && !task.hasBadgeData()) {
+        Future(() async {
+          try {
+            await BadgeService.fetchBadge([task]);
+          } catch (e) {
+            print('Badge generation request failed for task ${task.id}: $e');
+          }
+        });
+      }
     }
   }
 
@@ -318,8 +330,20 @@ class TaskStorageV2 {
   static Future<void> toggleTaskCompleted(int id) async {
     final task = getTask(id);
     if (task != null) {
+      final wasCompleted = task.isCompleted;
       task.toggleCompleted();
       await updateTask(task);
+
+      // もし未完了->完了になった場合
+      if (!wasCompleted && task.isCompleted && !task.hasBadgeData()) {
+        Future(() async {
+          try {
+            await BadgeService.fetchBadge([task]);
+          } catch (e) {
+            print('Badge generation request failed for task ${task.id}: $e');
+          }
+        });
+      }
     }
   }
 
