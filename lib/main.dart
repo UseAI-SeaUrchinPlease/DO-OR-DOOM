@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'feat/root/root.dart' as root;
 import 'core/services/task_storage.dart';
 import 'core/services/daily_diary_storage.dart';
+import 'feat/notification/notify.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -9,6 +10,14 @@ void main() async {
   // Hiveストレージを初期化
   await TaskStorage.init();
   await DailyDiaryStorage.initialize();
+  // NotificationService を初期化し、権限を要求
+  try {
+    await NotificationService.instance.init();
+    await NotificationService.instance.requestPermission();
+  } catch (e) {
+    // 初期化失敗はログに残すが起動は継続
+    print('NotificationService init failed: $e');
+  }
 
   runApp(const MainApp());
 }
