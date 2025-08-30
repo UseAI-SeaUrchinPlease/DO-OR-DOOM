@@ -132,6 +132,7 @@ class _TaskBadgeState extends State<TaskBadge> with SingleTickerProviderStateMix
           icon: const Icon(Icons.share, color: Color(0xFF6750A4)),
           tooltip: '共有',
         ),
+        // X (旧Twitter) ボタン — アセット画像を優先して表示
         IconButton(
           onPressed: () async {
             try {
@@ -141,9 +142,18 @@ class _TaskBadgeState extends State<TaskBadge> with SingleTickerProviderStateMix
               if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Twitter共有に失敗しました: $e')));
             }
           },
-          icon: const Icon(Icons.alternate_email, color: Color(0xFF1DA1F2)),
+          icon: SizedBox(
+            width: 24,
+            height: 24,
+            child: Image.asset(
+              'assets/icons/x_logo.png',
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const Icon(Icons.alternate_email, color: Color(0xFF1DA1F2)),
+            ),
+          ),
           tooltip: 'Twitter',
         ),
+        // LINE ボタン — 既存のアセットを使用
         IconButton(
           onPressed: () async {
             try {
@@ -153,7 +163,15 @@ class _TaskBadgeState extends State<TaskBadge> with SingleTickerProviderStateMix
               if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('LINE共有に失敗しました: $e')));
             }
           },
-          icon: const Icon(Icons.chat, color: Color(0xFF00B900)),
+          icon: SizedBox(
+            width: 24,
+            height: 24,
+            child: Image.asset(
+              'assets/icons/LINE_Brand_icon.png',
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const Icon(Icons.chat, color: Color(0xFF00B900)),
+            ),
+          ),
           tooltip: 'LINE',
         ),
         TextButton(
