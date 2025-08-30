@@ -21,7 +21,10 @@ migrate_working_dir/
 # The .vscode folder contains launch configuration and tasks you configure in
 # VS Code which you may wish to be included in version control, so this line
 # is commented out by default.
-#.vscode/
+# For shared development with different device preferences, we ignore it.
+.vscode/
+# But allow the example settings file to be shared
+!.vscode/settings.json.example
 
 # Flutter/Dart/Pub related
 **/doc/api/

@@ -1,6 +1,24 @@
 import 'package:flutter/material.dart';
+import 'feat/root/root.dart' as root;
+import 'core/services/task_storage.dart';
+import 'core/services/daily_diary_storage.dart';
+import 'feat/notification/notify.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Hiveストレージを初期化
+  await TaskStorage.init();
+  await DailyDiaryStorage.initialize();
+  // NotificationService を初期化し、権限を要求
+  try {
+    await NotificationService.instance.init();
+    await NotificationService.instance.requestPermission();
+  } catch (e) {
+    // 初期化失敗はログに残すが起動は継続
+    print('NotificationService init failed: $e');
+  }
+
   runApp(const MainApp());
 }
 
@@ -9,12 +27,33 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: Text('Hello World!'),
+    return MaterialApp(
+      title: 'DO OR DOOM - タスク管理カレンダー',
+      theme: ThemeData(
+        useMaterial3: true,
+        fontFamily: 'Roboto',
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF6750A4),
+          brightness: Brightness.light,
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFFE7E0EC),
+          foregroundColor: Color(0xFF49454F),
+          elevation: 0,
+        ),
+        cardTheme: const CardThemeData(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+          ),
+        ),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: Color(0xFF6750A4),
+          foregroundColor: Colors.white,
         ),
       ),
+      home: const root.RootWidget(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
