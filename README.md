@@ -1,3 +1,4 @@
 # do_or_doom
 
-A new Flutter project.
+さくらAIハッカソン
+スライド資料 https://canva.link/8fs1y16imfbaqsc
